@@ -36,8 +36,8 @@ TMDB_API_KEY = "f1e46d83ecce5dc29c90d9d2ed41f2ed"
 # CHANNEL IDS
 # ====================================
 
-SOURCE_ID = -1003913101784
-TARGET_ID = -1003927415038
+SOURCE_ID = -1003682968695
+TARGET_ID = -1002444484223
 
 # ====================================
 # CREATE CLIENT
