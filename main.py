@@ -23,8 +23,8 @@ def run_web():
 # TELEGRAM API
 # ====================================
 
-api_id = 123456
-api_hash = "YOUR_API_HASH"
+api_id = 21836257
+api_hash = "817ab8acbb95ae9ad02b74bd83ccbea2"
 
 # ====================================
 # TMDB API
@@ -126,8 +126,13 @@ def clean_title(text):
 
 def get_episode(text):
 
+    # SUPPORTS:
+    # Episode 8
+    # Episode 3-4
+    # Episodes 1-12
+
     match = re.search(
-        r'Episode\s*(\d+)',
+        r'Episode[s]?\s*([\d\-]+)',
         text,
         re.IGNORECASE
     )
@@ -166,7 +171,7 @@ def get_language_type(text):
 
     text = text.lower()
 
-    # AUDIO
+    # AUDIO TYPE
     if "multi-audio" in text:
         audio = "Multi Audio"
 
@@ -259,13 +264,13 @@ def create_caption(text):
     if not tmdb_id:
         return None
 
-    # LINK
+    # TGFLIX LINK
     if movie:
         tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
     else:
         tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # TITLE
+    # TITLE LINE
     title_line = f"🎬 {title}"
 
     if season:
@@ -274,7 +279,7 @@ def create_caption(text):
     if episode:
         title_line += f" • Episode {episode}"
 
-    # FINAL DESIGN
+    # FINAL CAPTION
     caption = f"""
 ╭──────────────⭓
 ┃ {title_line}
@@ -316,10 +321,12 @@ async def main():
         new_caption = create_caption(text)
 
         if not new_caption:
+            print("SKIPPED")
             return
 
         try:
 
+            # PHOTO
             if msg.photo:
 
                 await client.send_file(
@@ -328,6 +335,7 @@ async def main():
                     caption=new_caption
                 )
 
+            # VIDEO
             elif msg.video:
 
                 await client.send_file(
@@ -336,6 +344,7 @@ async def main():
                     caption=new_caption
                 )
 
+            # DOCUMENT
             elif msg.document:
 
                 await client.send_file(
@@ -344,6 +353,7 @@ async def main():
                     caption=new_caption
                 )
 
+            # TEXT / WEBPAGE
             else:
 
                 await client.send_message(
