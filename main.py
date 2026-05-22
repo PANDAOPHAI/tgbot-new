@@ -13,11 +13,11 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "TGFLIX BOT RUNNING"
+return "TGFLIX BOT RUNNING"
 
 def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+port = int(os.environ.get("PORT", 10000))
+app.run(host="0.0.0.0", port=port)
 
 # ====================================
 # TELEGRAM API
@@ -37,8 +37,8 @@ TMDB_API_KEY = "f1e46d83ecce5dc29c90d9d2ed41f2ed"
 # ====================================
 
 SOURCE_IDS = [
-    -1003900368405,
-    -1003682968695
+-1003900368405,
+-1003682968695
 ]
 
 # ====================================
@@ -46,9 +46,15 @@ SOURCE_IDS = [
 # ====================================
 
 TARGET_IDS = [
-    -1003927415038,
-    -1002444484223
+-1003927415038,
+-1002444484223
 ]
+
+# ====================================
+# LOG CHANNEL
+# ====================================
+
+LOG_CHANNEL_ID = -1003999952586
 
 # ====================================
 # CLIENT
@@ -57,17 +63,34 @@ TARGET_IDS = [
 client = TelegramClient("session", api_id, api_hash)
 
 # ====================================
+# SEND LOG
+# ====================================
+
+async def send_log(message):
+
+try:
+
+await client.send_message(
+LOG_CHANNEL_ID,
+message
+)
+
+except Exception as e:
+
+print("LOG ERROR:", e)
+
+# ====================================
 # GET URL
 # ====================================
 
 def get_url(text):
 
-    match = re.search(r'https?://\S+', text)
+match = re.search(r'https?://\S+', text)
 
-    if match:
-        return match.group(0)
+if match:
+return match.group(0)
 
-    return None
+return None
 
 # ====================================
 # NEWS POST CHECK
@@ -75,21 +98,21 @@ def get_url(text):
 
 def is_news_post(text):
 
-    news_keywords = [
-        "officially announced",
-        "release date",
-        "coming soon",
-        "set to release",
-        "announced"
-    ]
+news_keywords = [
+"officially announced",
+"release date",
+"coming soon",
+"set to release",
+"announced"
+]
 
-    text = text.lower()
+text = text.lower()
 
-    for word in news_keywords:
-        if word in text:
-            return True
+for word in news_keywords:
+if word in text:
+return True
 
-    return False
+return False
 
 # ====================================
 # MOVIE CHECK
@@ -97,7 +120,7 @@ def is_news_post(text):
 
 def is_movie(text):
 
-    return "movie" in text.lower()
+return "movie" in text.lower()
 
 # ====================================
 # GET SEASON
@@ -105,31 +128,31 @@ def is_movie(text):
 
 def get_season(text):
 
-    # TEXT SEASON
-    match = re.search(
-        r'Season\s*(\d+)',
-        text,
-        re.IGNORECASE
-    )
+# TEXT SEASON
+match = re.search(
+r'Season\s*(\d+)',
+text,
+re.IGNORECASE
+)
 
-    if match:
-        return match.group(1)
+if match:
+return match.group(1)
 
-    # URL SEASON
-    url = get_url(text)
+# URL SEASON
+url = get_url(text)
 
-    if url:
+if url:
 
-        match = re.search(
-            r'season-(\d+)',
-            url,
-            re.IGNORECASE
-        )
+match = re.search(
+r'season-(\d+)',
+url,
+re.IGNORECASE
+)
 
-        if match:
-            return match.group(1)
+if match:
+return match.group(1)
 
-    return None
+return None
 
 # ====================================
 # GET EPISODE
@@ -137,16 +160,16 @@ def get_season(text):
 
 def get_episode(text):
 
-    match = re.search(
-        r'Episode[s]?\s*([\d\-]+)',
-        text,
-        re.IGNORECASE
-    )
+match = re.search(
+r'Episode[s]?\s*([\d\-]+)',
+text,
+re.IGNORECASE
+)
 
-    if match:
-        return match.group(1)
+if match:
+return match.group(1)
 
-    return None
+return None
 
 # ====================================
 # CLEAN TITLE FROM URL
@@ -154,50 +177,50 @@ def get_episode(text):
 
 def clean_title_from_url(text):
 
-    url = get_url(text)
+url = get_url(text)
 
-    if not url:
-        return None
+if not url:
+return None
 
-    try:
+try:
 
-        slug = url.split("/")[-2]
+slug = url.split("/")[-2]
 
-        remove_patterns = [
-            r'-movie',
-            r'-season-\d+',
-            r'-episodes-hindi-subbed-download-hd',
-            r'-episodes-hindi-dubbed-download-hd',
-            r'-hindi-episodes-download-hd',
-            r'-hindi-subbed-download-hd',
-            r'-hindi-dubbed-download-hd',
-            r'-episodes-download-hd',
-            r'-episodes',
-            r'-download',
-            r'-hindi-subbed',
-            r'-hindi-dubbed',
-            r'-english-subbed',
-            r'-english-dubbed',
-            r'-tamil-dubbed',
-            r'-telugu-dubbed',
-            r'-multi-audio',
-            r'-multi-sub',
-            r'-subbed',
-            r'-dubbed',
-            r'-hd',
-            r'-zip-pack',
-            r'-\d{4}'
-        ]
+remove_patterns = [
+r'-movie',
+r'-season-\d+',
+r'-episodes-hindi-subbed-download-hd',
+r'-episodes-hindi-dubbed-download-hd',
+r'-hindi-episodes-download-hd',
+r'-hindi-subbed-download-hd',
+r'-hindi-dubbed-download-hd',
+r'-episodes-download-hd',
+r'-episodes',
+r'-download',
+r'-hindi-subbed',
+r'-hindi-dubbed',
+r'-english-subbed',
+r'-english-dubbed',
+r'-tamil-dubbed',
+r'-telugu-dubbed',
+r'-multi-audio',
+r'-multi-sub',
+r'-subbed',
+r'-dubbed',
+r'-hd',
+r'-zip-pack',
+r'-\d{4}'
+]
 
-        for pattern in remove_patterns:
-            slug = re.sub(pattern, '', slug)
+for pattern in remove_patterns:
+slug = re.sub(pattern, '', slug)
 
-        slug = slug.replace("-", " ")
+slug = slug.replace("-", " ")
 
-        return slug.title().strip()
+return slug.title().strip()
 
-    except:
-        return None
+except:
+return None
 
 # ====================================
 # CLEAN TITLE FROM NEWS POST
@@ -205,41 +228,41 @@ def clean_title_from_url(text):
 
 def clean_title_from_news(text):
 
-    lines = text.splitlines()
+lines = text.splitlines()
 
-    merged = " ".join(lines[:2])
+merged = " ".join(lines[:2])
 
-    remove_words = [
-        "officially announced",
-        "release date",
-        "coming soon",
-        "set to release",
-        "this summer 2026",
-        "( no specific date )",
-        "hindi dub"
-    ]
+remove_words = [
+"officially announced",
+"release date",
+"coming soon",
+"set to release",
+"this summer 2026",
+"( no specific date )",
+"hindi dub"
+]
 
-    cleaned = merged
+cleaned = merged
 
-    for word in remove_words:
+for word in remove_words:
 
-        cleaned = re.sub(
-            word,
-            '',
-            cleaned,
-            flags=re.IGNORECASE
-        )
+cleaned = re.sub(
+word,
+'',
+cleaned,
+flags=re.IGNORECASE
+)
 
-    cleaned = re.sub(
-        r'Season\s*\d+',
-        '',
-        cleaned,
-        flags=re.IGNORECASE
-    )
+cleaned = re.sub(
+r'Season\s*\d+',
+'',
+cleaned,
+flags=re.IGNORECASE
+)
 
-    cleaned = re.sub(r'\s+', ' ', cleaned)
+cleaned = re.sub(r'\s+', ' ', cleaned)
 
-    return cleaned.strip(" -!:")
+return cleaned.strip(" -!:")
 
 # ====================================
 # DETECT LANGUAGE
@@ -247,39 +270,39 @@ def clean_title_from_news(text):
 
 def get_language_type(text):
 
-    text = text.lower()
+text = text.lower()
 
-    if "multi-audio" in text:
-        audio = "Multi Audio"
+if "multi-audio" in text:
+audio = "Multi Audio"
 
-    elif "dubbed" in text:
-        audio = "Dubbed"
+elif "dubbed" in text:
+audio = "Dubbed"
 
-    elif "subbed" in text:
-        audio = "Subbed"
+elif "subbed" in text:
+audio = "Subbed"
 
-    else:
-        audio = "Subbed"
+else:
+audio = "Subbed"
 
-    if "hindi" in text:
-        lang = "Hindi"
+if "hindi" in text:
+lang = "Hindi"
 
-    elif "english" in text:
-        lang = "English"
+elif "english" in text:
+lang = "English"
 
-    elif "tamil" in text:
-        lang = "Tamil"
+elif "tamil" in text:
+lang = "Tamil"
 
-    elif "telugu" in text:
-        lang = "Telugu"
+elif "telugu" in text:
+lang = "Telugu"
 
-    else:
-        lang = ""
+else:
+lang = ""
 
-    if lang:
-        return f"{lang} {audio}"
+if lang:
+return f"{lang} {audio}"
 
-    return audio
+return audio
 
 # ====================================
 # TMDB SEARCH
@@ -287,30 +310,31 @@ def get_language_type(text):
 
 def get_tmdb_id(title, movie=False):
 
-    if movie:
-        url = "https://api.themoviedb.org/3/search/movie"
-    else:
-        url = "https://api.themoviedb.org/3/search/tv"
+if movie:
+url = "https://api.themoviedb.org/3/search/movie"
+else:
+url = "https://api.themoviedb.org/3/search/tv"
 
-    params = {
-        "api_key": TMDB_API_KEY,
-        "query": title
-    }
+params = {
+"api_key": TMDB_API_KEY,
+"query": title
+}
 
-    try:
+try:
 
-        response = requests.get(url, params=params)
+response = requests.get(url, params=params)
 
-        data = response.json()
+data = response.json()
 
-        if data.get("results"):
+if data.get("results"):
 
-            return data["results"][0]["id"]
+return data["results"][0]["id"]
 
-    except Exception as e:
-        print("TMDB ERROR:", e)
+except Exception as e:
 
-    return None
+print("TMDB ERROR:", e)
+
+return None
 
 # ====================================
 # CREATE DOWNLOAD POST
@@ -318,89 +342,80 @@ def get_tmdb_id(title, movie=False):
 
 def create_download_caption(text):
 
-    title = clean_title_from_url(text)
+title = clean_title_from_url(text)
 
-    if not title:
-        return None
+if not title:
+return None
 
-    movie = is_movie(text)
+movie = is_movie(text)
 
-    season = get_season(text)
+season = get_season(text)
 
-    episode = get_episode(text)
+episode = get_episode(text)
 
-    language_type = get_language_type(text)
+language_type = get_language_type(text)
 
-    tmdb_id = get_tmdb_id(title, movie)
+tmdb_id = get_tmdb_id(title, movie)
 
-    if not tmdb_id:
-        return None
+if not tmdb_id:
+return None
 
-    # MAIN PAGE
-    if movie:
-        tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
-    else:
-        tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
+# MAIN PAGE
+if movie:
+tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
+else:
+tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # COMPLETE SEASON CHECK
-    complete_season = False
+# COMPLETE SEASON CHECK
+complete_season = False
 
-    text_lower = text.lower()
+text_lower = text.lower()
 
-    if "complete season" in text_lower:
-        complete_season = True
+if "complete season" in text_lower:
+complete_season = True
 
-    if "zip pack" in text_lower:
-        complete_season = True
+if "zip pack" in text_lower:
+complete_season = True
 
-    # ====================================
-    # PLAY LINK
-    # ====================================
+# PLAY LINK
+play_link = None
 
-    play_link = None
+if not movie and season:
 
-    if not movie and season:
+# DEFAULT EPISODE = 1
+play_episode = "1"
 
-        # DEFAULT EPISODE = 1
-        play_episode = "1"
+# IF EPISODE EXISTS
+if episode:
 
-        # IF EPISODE EXISTS
-        if episode:
+first_ep = episode.split("-")[0]
 
-            first_ep = episode.split("-")[0]
+if first_ep.strip():
+play_episode = first_ep
 
-            if first_ep.strip():
-                play_episode = first_ep
+play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{play_episode}"
 
-        play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{play_episode}"
+# TITLE
+title_line = f"🎬 {title}"
 
-    # ====================================
-    # TITLE
-    # ====================================
+if season:
+title_line += f" • Season {season.zfill(2)}"
 
-    title_line = f"🎬 {title}"
+# ONLY ADD EPISODE IF EXISTS
+if episode:
+title_line += f" • Episode {episode}"
 
-    if season:
-        title_line += f" • Season {season.zfill(2)}"
-
-    # ONLY ADD EPISODE IF EXISTS
-    if episode:
-        title_line += f" • Episode {episode}"
-
-    # ====================================
-    # CAPTION
-    # ====================================
-
-    caption = f'''
+# CAPTION
+caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
 '''
 
-    # COMPLETE SEASON OUTPUT
-    if complete_season:
+# COMPLETE SEASON OUTPUT
+if complete_season:
 
-        caption += f'''
+caption += f'''
 
 📦 Complete Season Added
 🌐 Audio: {language_type}
@@ -409,9 +424,9 @@ def create_download_caption(text):
 {tgflix_link}
 '''
 
-    else:
+else:
 
-        caption += f'''
+caption += f'''
 
 ✨ Status: Added
 🌐 Audio: {language_type}
@@ -420,23 +435,23 @@ def create_download_caption(text):
 {tgflix_link}
 '''
 
-    # PLAY LINK
-    if play_link:
+# PLAY LINK
+if play_link:
 
-        caption += f'''
+caption += f'''
 
 ▶️ PLAY NOW:
 {play_link}
 '''
 
-    caption += '''
+caption += '''
 
 ━━━━━━━━━━━━━━━
 🔥 Powered By TGFLIX
 ━━━━━━━━━━━━━━━
 '''
 
-    return caption.strip()
+return caption.strip()
 
 # ====================================
 # CREATE NEWS POST
@@ -444,56 +459,56 @@ def create_download_caption(text):
 
 def create_news_caption(text):
 
-    title = clean_title_from_news(text)
+title = clean_title_from_news(text)
 
-    if not title:
-        return None
+if not title:
+return None
 
-    season = get_season(text)
+season = get_season(text)
 
-    tmdb_id = get_tmdb_id(title)
+tmdb_id = get_tmdb_id(title)
 
-    if not tmdb_id:
-        return None
+if not tmdb_id:
+return None
 
-    tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
+tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # CLEAN TEXT
-    lines = text.splitlines()
+# CLEAN TEXT
+lines = text.splitlines()
 
-    cleaned_lines = []
+cleaned_lines = []
 
-    blocked_words = [
-        "rareanimes",
-        "stay tuned",
-        "rai"
-    ]
+blocked_words = [
+"rareanimes",
+"stay tuned",
+"rai"
+]
 
-    for line in lines:
+for line in lines:
 
-        line_lower = line.lower()
+line_lower = line.lower()
 
-        skip = False
+skip = False
 
-        for word in blocked_words:
+for word in blocked_words:
 
-            if word in line_lower:
-                skip = True
-                break
+if word in line_lower:
+skip = True
+break
 
-        if not skip and line.strip():
-            cleaned_lines.append(line.strip())
+if not skip and line.strip():
+cleaned_lines.append(line.strip())
 
-    cleaned_text = "\n\n".join(cleaned_lines)
+cleaned_text = "\n\n".join(cleaned_lines)
 
-    # TITLE
-    title_line = f"🎬 {title}"
+# TITLE
+title_line = f"🎬 {title}"
 
-    if season:
-        title_line += f" • Season {season.zfill(2)}"
+if season:
+title_line += f" • Season {season.zfill(2)}"
 
-    # FINAL CAPTION
-    caption = f'''
+# FINAL CAPTION
+caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
@@ -508,7 +523,7 @@ def create_news_caption(text):
 ━━━━━━━━━━━━━━━
 '''
 
-    return caption.strip()
+return caption.strip()
 
 # ====================================
 # CREATE FINAL CAPTION
@@ -516,35 +531,35 @@ def create_news_caption(text):
 
 def create_caption(text):
 
-    text_lower = text.lower()
+text_lower = text.lower()
 
-    # NEWS POSTS
-    if is_news_post(text):
-        return create_news_caption(text)
+# NEWS POSTS
+if is_news_post(text):
+return create_news_caption(text)
 
-    # DOWNLOAD POSTS
-    download_keywords = [
-        "rareanimes.buzz",
-        "episode",
-        "episodes",
-        "movie",
-        "complete season",
-        "zip pack",
-        "added"
-    ]
+# DOWNLOAD POSTS
+download_keywords = [
+"rareanimes.buzz",
+"episode",
+"episodes",
+"movie",
+"complete season",
+"zip pack",
+"added"
+]
 
-    matched = False
+matched = False
 
-    for word in download_keywords:
+for word in download_keywords:
 
-        if word in text_lower:
-            matched = True
-            break
+if word in text_lower:
+matched = True
+break
 
-    if matched:
-        return create_download_caption(text)
+if matched:
+return create_download_caption(text)
 
-    return None
+return None
 
 # ====================================
 # MAIN BOT
@@ -552,90 +567,121 @@ def create_caption(text):
 
 async def main():
 
-    # LOAD SOURCES
-    source_entities = []
+# BOT START LOG
+await send_log("🟢 TGFLIX BOT STARTED")
 
-    for source_id in SOURCE_IDS:
+# LOAD SOURCES
+source_entities = []
 
-        entity = await client.get_entity(source_id)
+for source_id in SOURCE_IDS:
 
-        source_entities.append(entity)
+entity = await client.get_entity(source_id)
 
-        print("SOURCE LOADED:", entity.title)
+source_entities.append(entity)
 
-    # LISTEN TO ALL SOURCES
-    @client.on(events.NewMessage(chats=source_entities))
-    async def handler(event):
+print("SOURCE LOADED:", entity.title)
 
-        msg = event.message
+await send_log(
+f"📡 SOURCE LOADED:\n{entity.title}"
+)
 
-        text = msg.text or ""
+# LISTEN TO ALL SOURCES
+@client.on(events.NewMessage(chats=source_entities))
+async def handler(event):
 
-        print("\nNEW POST:")
-        print(text)
+msg = event.message
 
-        new_caption = create_caption(text)
+text = msg.text or ""
 
-        if not new_caption:
-            print("SKIPPED")
-            return
+print("\nNEW POST:")
+print(text)
 
-        try:
+await send_log(
+f"📥 NEW POST DETECTED:\n\n{text[:300]}"
+)
 
-            # SEND TO ALL TARGETS
-            for target in TARGET_IDS:
+new_caption = create_caption(text)
 
-                try:
+if not new_caption:
 
-                    # PHOTO
-                    if msg.photo:
+print("SKIPPED")
 
-                        await client.send_file(
-                            target,
-                            msg.photo,
-                            caption=new_caption
-                        )
+await send_log(
+f"⚠️ POST SKIPPED:\n\n{text[:300]}"
+)
 
-                    # VIDEO
-                    elif msg.video:
+return
 
-                        await client.send_file(
-                            target,
-                            msg.video,
-                            caption=new_caption
-                        )
+try:
 
-                    # DOCUMENT
-                    elif msg.document:
+# SEND TO ALL TARGETS
+for target in TARGET_IDS:
 
-                        await client.send_file(
-                            target,
-                            msg.document,
-                            caption=new_caption
-                        )
+try:
 
-                    # TEXT
-                    else:
+# PHOTO
+if msg.photo:
 
-                        await client.send_message(
-                            target,
-                            new_caption,
-                            link_preview=False
-                        )
+await client.send_file(
+target,
+msg.photo,
+caption=new_caption
+)
 
-                    print(f"POST SENT TO {target}")
+# VIDEO
+elif msg.video:
 
-                except Exception as e:
+await client.send_file(
+target,
+msg.video,
+caption=new_caption
+)
 
-                    print(f"FAILED {target}: {e}")
+# DOCUMENT
+elif msg.document:
 
-        except Exception as e:
+await client.send_file(
+target,
+msg.document,
+caption=new_caption
+)
 
-            print("SEND ERROR:", e)
+# TEXT
+else:
 
-    print("BOT RUNNING...")
+await client.send_message(
+target,
+new_caption,
+link_preview=False
+)
 
-    await client.run_until_disconnected()
+print(f"POST SENT TO {target}")
+
+await send_log(
+f"✅ POST SENT\nTARGET: {target}"
+)
+
+except Exception as e:
+
+print(f"FAILED {target}: {e}")
+
+await send_log(
+f"❌ SEND FAILED\nTARGET: {target}\n\nERROR:\n{e}"
+)
+
+except Exception as e:
+
+print("SEND ERROR:", e)
+
+await send_log(
+f"🚨 GLOBAL ERROR:\n\n{e}"
+)
+
+print("BOT RUNNING...")
+
+await send_log("🚀 BOT NOW LISTENING FOR POSTS")
+
+await client.run_until_disconnected()
 
 # ====================================
 # START EVERYTHING
@@ -644,4 +690,4 @@ async def main():
 threading.Thread(target=run_web).start()
 
 with client:
-    client.loop.run_until_complete(main())
+client.loop.run_until_complete(main())
