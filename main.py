@@ -1,24 +1,17 @@
 from telethon import TelegramClient, events
-from flask import Flask
+from flask import Flask, render_template, request, redirect
 import threading
 import requests
 import re
 import os
 import time
+import asyncio
 
 # ====================================
 # FLASK SERVER
 # ====================================
 
 app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "TGFLIX BOT RUNNING"
-
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
 
 # ====================================
 # TELEGRAM API
@@ -127,13 +120,355 @@ async def add_recent_log(text):
 
 def get_uptime():
 
-    seconds = int(time.time() - start_time)
+    seconds = int(
+        time.time() - start_time
+    )
 
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
 
     return f"{hours}h {minutes}m {secs}s"
+
+# ====================================
+# DASHBOARD
+# ====================================
+
+@app.route('/')
+def dashboard():
+
+    return render_template(
+        "dashboard.html",
+
+        sources=len(SOURCE_IDS),
+        targets=len(TARGET_IDS),
+
+        sent=stats["sent"],
+        errors=stats["errors"],
+        duplicates=stats["duplicates"],
+
+        source_ids=SOURCE_IDS,
+        target_ids=TARGET_IDS,
+        paused_targets=paused_targets,
+
+        logs=recent_logs[-10:]
+    )
+
+# ====================================
+# DASHBOARD ADD SOURCE
+# ====================================
+
+@app.route('/addsource', methods=["POST"])
+def add_source():
+
+    try:
+
+        source_id = int(
+            request.form.get("source_id")
+        )
+
+        if source_id not in SOURCE_IDS:
+
+            SOURCE_IDS.append(source_id)
+
+            msg = f"📡 SOURCE ADDED → {source_id}"
+
+            recent_logs.append(msg)
+
+            asyncio.run_coroutine_threadsafe(
+                send_log(msg),
+                client.loop
+            )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ SOURCE ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD REMOVE SOURCE
+# ====================================
+
+@app.route('/removesource', methods=["POST"])
+def remove_source():
+
+    try:
+
+        source_id = int(
+            request.form.get("source_id")
+        )
+
+        if source_id in SOURCE_IDS:
+
+            SOURCE_IDS.remove(source_id)
+
+            msg = f"🗑 SOURCE REMOVED → {source_id}"
+
+            recent_logs.append(msg)
+
+            asyncio.run_coroutine_threadsafe(
+                send_log(msg),
+                client.loop
+            )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ REMOVE SOURCE ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD ADD TARGET
+# ====================================
+
+@app.route('/addtarget', methods=["POST"])
+def add_target():
+
+    try:
+
+        target_id = int(
+            request.form.get("target_id")
+        )
+
+        if target_id not in TARGET_IDS:
+
+            TARGET_IDS.append(target_id)
+
+            msg = f"🎯 TARGET ADDED → {target_id}"
+
+            recent_logs.append(msg)
+
+            asyncio.run_coroutine_threadsafe(
+                send_log(msg),
+                client.loop
+            )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ TARGET ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD REMOVE TARGET
+# ====================================
+
+@app.route('/removetarget', methods=["POST"])
+def remove_target():
+
+    try:
+
+        target_id = int(
+            request.form.get("target_id")
+        )
+
+        if target_id in TARGET_IDS:
+
+            TARGET_IDS.remove(target_id)
+
+            msg = f"🗑 TARGET REMOVED → {target_id}"
+
+            recent_logs.append(msg)
+
+            asyncio.run_coroutine_threadsafe(
+                send_log(msg),
+                client.loop
+            )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ REMOVE TARGET ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD PAUSE TARGET
+# ====================================
+
+@app.route('/pause', methods=["POST"])
+def pause_target():
+
+    try:
+
+        target_id = int(
+            request.form.get("target_id")
+        )
+
+        paused_targets.add(target_id)
+
+        msg = f"⏸ TARGET PAUSED → {target_id}"
+
+        recent_logs.append(msg)
+
+        asyncio.run_coroutine_threadsafe(
+            send_log(msg),
+            client.loop
+        )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ PAUSE ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD UNPAUSE TARGET
+# ====================================
+
+@app.route('/unpause', methods=["POST"])
+def unpause_target():
+
+    try:
+
+        target_id = int(
+            request.form.get("target_id")
+        )
+
+        if target_id in paused_targets:
+
+            paused_targets.remove(target_id)
+
+            msg = f"🟢 TARGET UNPAUSED → {target_id}"
+
+            recent_logs.append(msg)
+
+            asyncio.run_coroutine_threadsafe(
+                send_log(msg),
+                client.loop
+            )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ UNPAUSE ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD TEST
+# ====================================
+
+@app.route('/test')
+def dashboard_test():
+
+    async def send_test():
+
+        test_caption = '''
+╭──────────────⭓
+┃ 🎬 TGFLIX TEST POST
+╰──────────────⭓
+
+✨ Dashboard Working Perfectly
+
+━━━━━━━━━━━━━━━
+🔥 Powered By TGFLIX
+━━━━━━━━━━━━━━━
+'''
+
+        for target in TARGET_IDS:
+
+            try:
+
+                await client.send_message(
+                    target,
+                    test_caption
+                )
+
+            except:
+                pass
+
+    asyncio.run_coroutine_threadsafe(
+        send_test(),
+        client.loop
+    )
+
+    msg = "🧪 DASHBOARD TEST SENT"
+
+    recent_logs.append(msg)
+
+    asyncio.run_coroutine_threadsafe(
+        send_log(msg),
+        client.loop
+    )
+
+    return redirect("/")
+
+# ====================================
+# DASHBOARD BROADCAST
+# ====================================
+
+@app.route('/broadcast', methods=["POST"])
+def dashboard_broadcast():
+
+    try:
+
+        message = request.form.get("message")
+
+        async def send_broadcast():
+
+            for target in TARGET_IDS:
+
+                if target in paused_targets:
+                    continue
+
+                try:
+
+                    await client.send_message(
+                        target,
+                        message
+                    )
+
+                except:
+                    pass
+
+        asyncio.run_coroutine_threadsafe(
+            send_broadcast(),
+            client.loop
+        )
+
+        msg = f"📢 DASHBOARD BROADCAST → {message}"
+
+        recent_logs.append(msg)
+
+        asyncio.run_coroutine_threadsafe(
+            send_log(msg),
+            client.loop
+        )
+
+    except Exception as e:
+
+        recent_logs.append(
+            f"❌ BROADCAST ERROR → {e}"
+        )
+
+    return redirect("/")
+
+# ====================================
+# RUN WEB
+# ====================================
+
+def run_web():
+
+    port = int(
+        os.environ.get("PORT", 10000)
+    )
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
 
 # ====================================
 # GET URL
@@ -152,7 +487,7 @@ def get_url(text):
     return None
 
 # ====================================
-# NEWS POST CHECK
+# NEWS CHECK
 # ====================================
 
 def is_news_post(text):
@@ -197,19 +532,6 @@ def get_season(text):
     if match:
         return match.group(1)
 
-    url = get_url(text)
-
-    if url:
-
-        match = re.search(
-            r'season-(\d+)',
-            url,
-            re.IGNORECASE
-        )
-
-        if match:
-            return match.group(1)
-
     return None
 
 # ====================================
@@ -233,11 +555,23 @@ def get_episode(text):
 # DUPLICATE ID
 # ====================================
 
-def create_post_id(title, season, episode):
+def create_post_id(
+    title,
+    season,
+    episode
+):
 
-    title = (title or "").lower().strip()
-    season = (season or "").strip()
-    episode = (episode or "").strip()
+    title = (
+        title or ""
+    ).lower().strip()
+
+    season = (
+        season or ""
+    ).strip()
+
+    episode = (
+        episode or ""
+    ).strip()
 
     return f"{title}|{season}|{episode}"
 
@@ -256,35 +590,6 @@ def clean_title_from_url(text):
 
         slug = url.split("/")[-2]
 
-        remove_patterns = [
-            r'-movie',
-            r'-season-\d+',
-            r'-episodes-hindi-subbed-download-hd',
-            r'-episodes-hindi-dubbed-download-hd',
-            r'-hindi-episodes-download-hd',
-            r'-hindi-subbed-download-hd',
-            r'-hindi-dubbed-download-hd',
-            r'-episodes-download-hd',
-            r'-episodes',
-            r'-download',
-            r'-hindi-subbed',
-            r'-hindi-dubbed',
-            r'-english-subbed',
-            r'-english-dubbed',
-            r'-tamil-dubbed',
-            r'-telugu-dubbed',
-            r'-multi-audio',
-            r'-multi-sub',
-            r'-subbed',
-            r'-dubbed',
-            r'-hd',
-            r'-zip-pack',
-            r'-\d{4}'
-        ]
-
-        for pattern in remove_patterns:
-            slug = re.sub(pattern, '', slug)
-
         slug = slug.replace("-", " ")
 
         return slug.title().strip()
@@ -293,96 +598,13 @@ def clean_title_from_url(text):
         return None
 
 # ====================================
-# CLEAN NEWS TITLE
-# ====================================
-
-def clean_title_from_news(text):
-
-    lines = text.splitlines()
-
-    merged = " ".join(lines[:2])
-
-    remove_words = [
-        "officially announced",
-        "release date",
-        "coming soon",
-        "set to release",
-        "this summer 2026",
-        "( no specific date )",
-        "hindi dub"
-    ]
-
-    cleaned = merged
-
-    for word in remove_words:
-
-        cleaned = re.sub(
-            word,
-            '',
-            cleaned,
-            flags=re.IGNORECASE
-        )
-
-    cleaned = re.sub(
-        r'Season\s*\d+',
-        '',
-        cleaned,
-        flags=re.IGNORECASE
-    )
-
-    cleaned = re.sub(
-        r'\s+',
-        ' ',
-        cleaned
-    )
-
-    return cleaned.strip(" -!:")
-
-# ====================================
-# LANGUAGE DETECT
-# ====================================
-
-def get_language_type(text):
-
-    text = text.lower()
-
-    if "multi-audio" in text:
-        audio = "Multi Audio"
-
-    elif "dubbed" in text:
-        audio = "Dubbed"
-
-    elif "subbed" in text:
-        audio = "Subbed"
-
-    else:
-        audio = "Subbed"
-
-    if "hindi" in text:
-        lang = "Hindi"
-
-    elif "english" in text:
-        lang = "English"
-
-    elif "tamil" in text:
-        lang = "Tamil"
-
-    elif "telugu" in text:
-        lang = "Telugu"
-
-    else:
-        lang = ""
-
-    if lang:
-        return f"{lang} {audio}"
-
-    return audio
-
-# ====================================
 # TMDB SEARCH
 # ====================================
 
-def get_tmdb_id(title, movie=False):
+def get_tmdb_id(
+    title,
+    movie=False
+):
 
     if movie:
         url = "https://api.themoviedb.org/3/search/movie"
@@ -407,133 +629,24 @@ def get_tmdb_id(title, movie=False):
 
             return data["results"][0]["id"]
 
-    except Exception as e:
-        print("TMDB ERROR:", e)
+    except:
+        return None
 
     return None
 
 # ====================================
-# DOWNLOAD POST
+# CREATE CAPTION
 # ====================================
 
-def create_download_caption(text):
+def create_caption(text):
 
     title = clean_title_from_url(text)
 
     if not title:
         return None
 
-    movie = is_movie(text)
-
     season = get_season(text)
-
     episode = get_episode(text)
-
-    language_type = get_language_type(text)
-
-    tmdb_id = get_tmdb_id(title, movie)
-
-    if not tmdb_id:
-        return None
-
-    if movie:
-        tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
-    else:
-        tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
-
-    complete_season = False
-
-    text_lower = text.lower()
-
-    if "complete season" in text_lower:
-        complete_season = True
-
-    if "zip pack" in text_lower:
-        complete_season = True
-
-    play_link = None
-
-    if not movie and season:
-
-        play_episode = "1"
-
-        if episode:
-
-            first_ep = episode.split("-")[0]
-
-            if first_ep.strip():
-                play_episode = first_ep
-
-        play_link = (
-            f"https://tgflix.lovable.app/play-series/"
-            f"{tmdb_id}/{season}/{play_episode}"
-        )
-
-    title_line = f"🎬 {title}"
-
-    if season:
-        title_line += f" • Season {season.zfill(2)}"
-
-    if episode:
-        title_line += f" • Episode {episode}"
-
-    caption = f'''
-╭──────────────⭓
-┃ {title_line}
-╰──────────────⭓
-'''
-
-    if complete_season:
-
-        caption += f'''
-
-📦 Complete Season Added
-🌐 Audio: {language_type}
-
-🔗 WATCH NOW:
-{tgflix_link}
-'''
-
-    else:
-
-        caption += f'''
-
-✨ Status: Added
-🌐 Audio: {language_type}
-
-🔗 WATCH NOW:
-{tgflix_link}
-'''
-
-    if play_link:
-
-        caption += f'''
-
-▶️ PLAY NOW:
-{play_link}
-'''
-
-    caption += '''
-
-━━━━━━━━━━━━━━━
-🔥 Powered By TGFLIX
-━━━━━━━━━━━━━━━
-'''
-
-    return caption.strip()
-
-# ====================================
-# NEWS POST
-# ====================================
-
-def create_news_caption(text):
-
-    title = clean_title_from_news(text)
-
-    if not title:
-        return None
-
-    season = get_season(text)
 
     tmdb_id = get_tmdb_id(title)
 
@@ -544,46 +657,12 @@ def create_news_caption(text):
         f"https://tgflix.lovable.app/series/{tmdb_id}"
     )
 
-    lines = text.splitlines()
-
-    cleaned_lines = []
-
-    blocked_words = [
-        "rareanimes",
-        "stay tuned",
-        "rai"
-    ]
-
-    for line in lines:
-
-        line_lower = line.lower()
-
-        skip = False
-
-        for word in blocked_words:
-
-            if word in line_lower:
-                skip = True
-                break
-
-        if not skip and line.strip():
-            cleaned_lines.append(line.strip())
-
-    cleaned_text = "\n\n".join(cleaned_lines)
-
-    title_line = f"🎬 {title}"
-
-    if season:
-        title_line += f" • Season {season.zfill(2)}"
-
     caption = f'''
 ╭──────────────⭓
-┃ {title_line}
+┃ 🎬 {title}
 ╰──────────────⭓
 
-{cleaned_text}
-
-🔗 WATCH S01 NOW:
+🔗 WATCH NOW:
 {tgflix_link}
 
 ━━━━━━━━━━━━━━━
@@ -592,34 +671,6 @@ def create_news_caption(text):
 '''
 
     return caption.strip()
-
-# ====================================
-# FINAL CAPTION
-# ====================================
-
-def create_caption(text):
-
-    text_lower = text.lower()
-
-    if is_news_post(text):
-        return create_news_caption(text)
-
-    download_keywords = [
-        "rareanimes.buzz",
-        "episode",
-        "episodes",
-        "movie",
-        "complete season",
-        "zip pack",
-        "added"
-    ]
-
-    for word in download_keywords:
-
-        if word in text_lower:
-            return create_download_caption(text)
-
-    return None
 
 # ====================================
 # MAIN BOT
@@ -642,10 +693,9 @@ async def main():
 
         print("\nNEW POST:")
         print(text)
-        print("CHAT ID:", chat_id)
 
         # ====================================
-        # ADMIN COMMANDS
+        # TELEGRAM ADMIN COMMANDS
         # ====================================
 
         if chat_id == ADMIN_CHANNEL_ID:
@@ -680,456 +730,11 @@ async def main():
 ❓ /help
 '''
                 )
-                return
-
-            elif text.startswith("/ping"):
-
-                ping_ms = round(
-                    client.loop.time() * 1000
-                ) % 1000
-
-                await event.reply(
-                    f'''
-🏓 PONG
-
-⚡ Ping: {ping_ms}ms
-🟢 Bot Online
-'''
-                )
-                return
-
-            elif text.startswith("/stats"):
-
-                await event.reply(
-                    f'''
-📊 TGFLIX STATS
-
-✅ Sent: {stats['sent']}
-⚠️ Skipped: {stats['skipped']}
-❌ Errors: {stats['errors']}
-🧠 Duplicates: {stats['duplicates']}
-'''
-                )
-                return
-
-            elif text.startswith("/status"):
-
-                active_targets = (
-                    len(TARGET_IDS)
-                    - len(paused_targets)
-                )
-
-                paused_count = len(paused_targets)
-
-                await event.reply(
-                    f'''
-🤖 TGFLIX STATUS
-
-🟢 Bot: ONLINE
-
-📡 Sources: {len(SOURCE_IDS)}
-🎯 Targets: {len(TARGET_IDS)}
-
-▶️ Active Targets: {active_targets}
-⏸ Paused Targets: {paused_count}
-
-🕒 Uptime:
-{get_uptime()}
-'''
-                )
-                return
-
-            elif text.startswith("/uptime"):
-
-                await event.reply(
-                    f'''
-⏰ BOT UPTIME
-
-{get_uptime()}
-'''
-                )
-                return
-
-            elif text.startswith("/sources"):
-
-                source_text = ""
-
-                for source_id in SOURCE_IDS:
-
-                    try:
-
-                        entity = await client.get_entity(
-                            source_id
-                        )
-
-                        source_text += (
-                            f"• {entity.title}\n"
-                            f"`{source_id}`\n\n"
-                        )
-
-                    except:
-
-                        source_text += (
-                            f"• Unknown Channel\n"
-                            f"`{source_id}`\n\n"
-                        )
-
-                await event.reply(
-                    f'''
-📡 TOTAL SOURCES:
-{len(SOURCE_IDS)}
-
-{source_text}
-'''
-                )
-                return
-
-            elif text.startswith("/targets"):
-
-                target_text = ""
-
-                for target_id in TARGET_IDS:
-
-                    try:
-
-                        entity = await client.get_entity(
-                            target_id
-                        )
-
-                        status = (
-                            "⏸ PAUSED"
-                            if target_id in paused_targets
-                            else "🟢 ACTIVE"
-                        )
-
-                        target_text += (
-                            f"• {entity.title}\n"
-                            f"`{target_id}`\n"
-                            f"{status}\n\n"
-                        )
-
-                    except:
-
-                        target_text += (
-                            f"• Unknown Channel\n"
-                            f"`{target_id}`\n\n"
-                        )
-
-                await event.reply(
-                    f'''
-🎯 TOTAL TARGETS:
-{len(TARGET_IDS)}
-
-{target_text}
-'''
-                )
-                return
-
-            elif text.startswith("/addsource"):
-
-                try:
-
-                    new_source = int(
-                        text.split(" ")[1]
-                    )
-
-                    if new_source not in SOURCE_IDS:
-
-                        SOURCE_IDS.append(new_source)
-
-                        await event.reply(
-                            f"✅ SOURCE ADDED\n\n{new_source}"
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "⚠️ Source Already Exists"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/addsource -100xxxx"
-                    )
-
-                return
-
-            elif text.startswith("/removesource"):
-
-                try:
-
-                    remove_id = int(
-                        text.split(" ")[1]
-                    )
-
-                    if remove_id in SOURCE_IDS:
-
-                        SOURCE_IDS.remove(remove_id)
-
-                        await event.reply(
-                            f"✅ SOURCE REMOVED\n\n{remove_id}"
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "❌ Source Not Found"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/removesource -100xxxx"
-                    )
-
-                return
-
-            elif text.startswith("/addtarget"):
-
-                try:
-
-                    new_target = int(
-                        text.split(" ")[1]
-                    )
-
-                    if new_target not in TARGET_IDS:
-
-                        TARGET_IDS.append(new_target)
-
-                        await event.reply(
-                            f"✅ TARGET ADDED\n\n{new_target}"
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "⚠️ Target Already Exists"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/addtarget -100xxxx"
-                    )
-
-                return
-
-            elif text.startswith("/removetarget"):
-
-                try:
-
-                    remove_id = int(
-                        text.split(" ")[1]
-                    )
-
-                    if remove_id in TARGET_IDS:
-
-                        TARGET_IDS.remove(remove_id)
-
-                        await event.reply(
-                            f"✅ TARGET REMOVED\n\n{remove_id}"
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "❌ Target Not Found"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/removetarget -100xxxx"
-                    )
-
-                return
-
-            elif text.startswith("/broadcast"):
-
-                try:
-
-                    broadcast_text = text.replace(
-                        "/broadcast",
-                        ""
-                    ).strip()
-
-                    if not broadcast_text:
-
-                        await event.reply(
-                            "❌ Give Broadcast Message"
-                        )
-                        return
-
-                    sent_count = 0
-
-                    for target in TARGET_IDS:
-
-                        if target in paused_targets:
-                            continue
-
-                        try:
-
-                            await client.send_message(
-                                target,
-                                broadcast_text
-                            )
-
-                            sent_count += 1
-
-                        except:
-                            pass
-
-                    await event.reply(
-                        f'''
-📢 BROADCAST SENT
-
-🎯 Sent To:
-{sent_count} Targets
-'''
-                    )
-
-                except Exception as e:
-
-                    await event.reply(
-                        f"❌ ERROR:\n{e}"
-                    )
-
-                return
-
-            elif text.startswith("/logs"):
-
-                if not recent_logs:
-
-                    await event.reply(
-                        "❌ No Logs Found"
-                    )
-
-                else:
-
-                    log_text = "\n\n".join(
-                        recent_logs[-10:]
-                    )
-
-                    await event.reply(
-                        f'''
-📜 RECENT LOGS
-
-{log_text}
-'''
-                    )
-
-                return
-
-            elif text.startswith("/test"):
-
-                test_caption = '''
-╭──────────────⭓
-┃ 🎬 TGFLIX TEST POST
-╰──────────────⭓
-
-✨ Bot Working Perfectly
-
-🔗 WATCH NOW:
-https://tgflix.lovable.app/
-
-━━━━━━━━━━━━━━━
-🔥 Powered By TGFLIX
-━━━━━━━━━━━━━━━
-'''
-
-                sent = 0
-
-                for target in TARGET_IDS:
-
-                    if target in paused_targets:
-                        continue
-
-                    try:
-
-                        await client.send_message(
-                            target,
-                            test_caption
-                        )
-
-                        sent += 1
-
-                    except:
-                        pass
-
-                await event.reply(
-                    f'''
-✅ TEST SENT
-
-🎯 Total Targets:
-{sent}
-'''
-                )
-
-                return
-
-            elif text.startswith("/pause"):
-
-                try:
-
-                    target_id = int(
-                        text.split(" ")[1]
-                    )
-
-                    paused_targets.add(target_id)
-
-                    await event.reply(
-                        f'''
-⏸ TARGET PAUSED
-
-{target_id}
-'''
-                    )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/pause -100xxxx"
-                    )
-
-                return
-
-            elif text.startswith("/unpause"):
-
-                try:
-
-                    target_id = int(
-                        text.split(" ")[1]
-                    )
-
-                    if target_id in paused_targets:
-
-                        paused_targets.remove(target_id)
-
-                        await event.reply(
-                            f'''
-🟢 TARGET UNPAUSED
-
-{target_id}
-'''
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "❌ Target Not Paused"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/unpause -100xxxx"
-                    )
 
                 return
 
         # ====================================
-        # IGNORE NON SOURCE CHANNELS
+        # IGNORE NON SOURCES
         # ====================================
 
         if chat_id not in SOURCE_IDS:
@@ -1144,10 +749,6 @@ https://tgflix.lovable.app/
         if not new_caption:
 
             stats["skipped"] += 1
-
-            await add_recent_log(
-                f"⚠️ SKIPPED → {text[:50]}"
-            )
 
             return
 
@@ -1203,22 +804,6 @@ https://tgflix.lovable.app/
                     await client.send_file(
                         target,
                         msg.photo,
-                        caption=new_caption
-                    )
-
-                elif msg.video:
-
-                    await client.send_file(
-                        target,
-                        msg.video,
-                        caption=new_caption
-                    )
-
-                elif msg.document:
-
-                    await client.send_file(
-                        target,
-                        msg.document,
                         caption=new_caption
                     )
 
