@@ -37,7 +37,12 @@ TMDB_API_KEY = "f1e46d83ecce5dc29c90d9d2ed41f2ed"
 # ====================================
 
 SOURCE_ID = -1003900368405
-TARGET_ID = -1003927415038
+
+# MULTIPLE TARGET CHANNELS
+TARGET_IDS = [
+    -1003927415038,
+    -1003913101784
+]
 
 # ====================================
 # CLIENT
@@ -507,39 +512,52 @@ async def main():
 
         try:
 
-            if msg.photo:
+            # SEND TO ALL TARGET CHANNELS
+            for target in TARGET_IDS:
 
-                await client.send_file(
-                    TARGET_ID,
-                    msg.photo,
-                    caption=new_caption
-                )
+                try:
 
-            elif msg.video:
+                    # PHOTO
+                    if msg.photo:
 
-                await client.send_file(
-                    TARGET_ID,
-                    msg.video,
-                    caption=new_caption
-                )
+                        await client.send_file(
+                            target,
+                            msg.photo,
+                            caption=new_caption
+                        )
 
-            elif msg.document:
+                    # VIDEO
+                    elif msg.video:
 
-                await client.send_file(
-                    TARGET_ID,
-                    msg.document,
-                    caption=new_caption
-                )
+                        await client.send_file(
+                            target,
+                            msg.video,
+                            caption=new_caption
+                        )
 
-            else:
+                    # DOCUMENT
+                    elif msg.document:
 
-                await client.send_message(
-                    TARGET_ID,
-                    new_caption,
-                    link_preview=False
-                )
+                        await client.send_file(
+                            target,
+                            msg.document,
+                            caption=new_caption
+                        )
 
-            print("POST COPIED")
+                    # TEXT
+                    else:
+
+                        await client.send_message(
+                            target,
+                            new_caption,
+                            link_preview=False
+                        )
+
+                    print(f"POST SENT TO {target}")
+
+                except Exception as e:
+
+                    print(f"FAILED {target}: {e}")
 
         except Exception as e:
 
