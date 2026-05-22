@@ -466,7 +466,12 @@ def create_download_caption(text):
             f" • Episode {episode}"
         )
 
+    # KEEP ORIGINAL LINK FOR PREVIEW
+    original_link = get_url(text)
+
     caption = f"""
+{original_link}
+
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
@@ -558,7 +563,11 @@ def create_news_caption(text):
             f" • Season {season.zfill(2)}"
         )
 
+    original_link = get_url(text) or ""
+
     caption = f"""
+{original_link}
+
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
@@ -744,7 +753,8 @@ async def main():
 
                     await client.send_message(
                         target,
-                        new_caption
+                        new_caption,
+                        link_preview=True
                     )
 
                     print(
