@@ -196,7 +196,6 @@ def clean_title_from_news(text):
 
     first_line = lines[0]
 
-    # REMOVE ANNOUNCEMENT WORDS
     remove_words = [
         "officially announced",
         "release date",
@@ -214,7 +213,6 @@ def clean_title_from_news(text):
             flags=re.IGNORECASE
         )
 
-    # REMOVE SEASON
     cleaned = re.sub(
         r'Season\s*\d+',
         '',
@@ -371,17 +369,46 @@ def create_news_caption(text):
 
     tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
+    # CLEAN UNWANTED LINES
+    lines = text.splitlines()
+
+    cleaned_lines = []
+
+    blocked_words = [
+        "rareanimes",
+        "stay tuned",
+        "rai"
+    ]
+
+    for line in lines:
+
+        line_lower = line.lower()
+
+        skip = False
+
+        for word in blocked_words:
+            if word in line_lower:
+                skip = True
+                break
+
+        if not skip and line.strip():
+            cleaned_lines.append(line.strip())
+
+    cleaned_text = "\n\n".join(cleaned_lines)
+
+    # TITLE LINE
     title_line = f"🎬 {title}"
 
     if season:
         title_line += f" • Season {season.zfill(2)}"
 
+    # FINAL DESIGN
     caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
 
-{text}
+{cleaned_text}
 
 🔗 WATCH S01 NOW:
 {tgflix_link}
@@ -472,6 +499,7 @@ async def main():
             print("POST COPIED")
 
         except Exception as e:
+
             print("SEND ERROR:", e)
 
     print("BOT RUNNING...")
