@@ -466,28 +466,19 @@ def create_download_caption(text):
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
-"""
-
-    if complete_season:
-
-        caption += f"""
-
-📦 Complete Season Added
-🌐 Audio: {language_type}
-
-🔗 WATCH NOW:
-{tgflix_link}
-"""
-
-    else:
-
-        caption += f"""
 
 ✨ Status: Added
 🌐 Audio: {language_type}
 
 🔗 WATCH NOW:
 {tgflix_link}
+"""
+
+    if complete_season:
+
+        caption += """
+
+📦 COMPLETE SEASON PACK
 """
 
     if play_link:
@@ -570,7 +561,7 @@ def create_news_caption(text):
 
 {cleaned_text}
 
-🔗 WATCH S01 NOW:
+🔗 WATCH NOW:
 {tgflix_link}
 
 ━━━━━━━━━━━━━━━
@@ -722,70 +713,6 @@ async def main():
 
                 return
 
-            if text.startswith("/addsource"):
-
-                try:
-
-                    source_id = int(
-                        text.split(" ")[1]
-                    )
-
-                    if source_id not in SOURCE_IDS:
-
-                        SOURCE_IDS.append(
-                            source_id
-                        )
-
-                        await event.reply(
-                            f"✅ Source Added:\n{source_id}"
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "⚠️ Source Already Exists"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/addsource -100xxxx"
-                    )
-
-                return
-
-            if text.startswith("/addtarget"):
-
-                try:
-
-                    target_id = int(
-                        text.split(" ")[1]
-                    )
-
-                    if target_id not in TARGET_IDS:
-
-                        TARGET_IDS.append(
-                            target_id
-                        )
-
-                        await event.reply(
-                            f"✅ Target Added:\n{target_id}"
-                        )
-
-                    else:
-
-                        await event.reply(
-                            "⚠️ Target Already Exists"
-                        )
-
-                except:
-
-                    await event.reply(
-                        "❌ Usage:\n/addtarget -100xxxx"
-                    )
-
-                return
-
         # ====================================
         # IGNORE NON SOURCE CHANNELS
         # ====================================
@@ -867,19 +794,26 @@ async def main():
 
                 try:
 
-                    # MEDIA + CAPTION + BUTTONS
-                    if msg.media:
+                    media_sent = False
+
+                    # REAL MEDIA ONLY
+                    if (
+                        msg.photo or
+                        msg.video or
+                        msg.document
+                    ):
 
                         await client.send_file(
                             target,
                             file=msg.media,
                             caption=new_caption,
-                            buttons=buttons,
-                            link_preview=False
+                            buttons=buttons
                         )
 
-                    # TEXT ONLY
-                    else:
+                        media_sent = True
+
+                    # TEXT POSTS
+                    if not media_sent:
 
                         await client.send_message(
                             target,
