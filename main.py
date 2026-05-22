@@ -1,8 +1,4 @@
-from telethon import TelegramClient, events, Button
-from telethon.tl.types import (
-    MessageMediaPhoto,
-    MessageMediaDocument
-)
+from telethon import TelegramClient, events
 from flask import Flask
 import threading
 import requests
@@ -608,46 +604,6 @@ def create_caption(text):
     return None
 
 # ====================================
-# BUTTONS
-# ====================================
-
-def create_buttons(caption):
-
-    buttons = []
-
-    # WATCH BUTTON
-    watch_match = re.search(
-        r'https://tgflix\.lovable\.app/(series|movie)/\d+',
-        caption
-    )
-
-    if watch_match:
-
-        buttons.append([
-            Button.url(
-                "🎬 WATCH NOW",
-                watch_match.group(0)
-            )
-        ])
-
-    # PLAY BUTTON
-    play_match = re.search(
-        r'https://tgflix\.lovable\.app/play-series/\d+/\d+/\d+',
-        caption
-    )
-
-    if play_match:
-
-        buttons.append([
-            Button.url(
-                "▶️ PLAY NOW",
-                play_match.group(0)
-            )
-        ])
-
-    return buttons
-
-# ====================================
 # MAIN
 # ====================================
 
@@ -777,14 +733,6 @@ async def main():
         sent_cache.add(post_id)
 
         # ====================================
-        # BUTTONS
-        # ====================================
-
-        buttons = create_buttons(
-            new_caption
-        )
-
-        # ====================================
         # SEND
         # ====================================
 
@@ -794,31 +742,10 @@ async def main():
 
                 try:
 
-                    # REAL TELEGRAM MEDIA ONLY
-                    if isinstance(
-                        msg.media,
-                        (
-                            MessageMediaPhoto,
-                            MessageMediaDocument
-                        )
-                    ):
-
-                        await client.send_file(
-                            target,
-                            file=msg.media,
-                            caption=new_caption,
-                            buttons=buttons
-                        )
-
-                    # TEXT / WEBPAGE POSTS
-                    else:
-
-                        await client.send_message(
-                            target,
-                            new_caption,
-                            buttons=buttons,
-                            link_preview=False
-                        )
+                    await client.send_message(
+                        target,
+                        new_caption
+                    )
 
                     print(
                         f"POST SENT TO {target}"
