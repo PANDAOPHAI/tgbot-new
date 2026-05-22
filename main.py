@@ -192,20 +192,26 @@ def clean_title_from_url(text):
 
 def clean_title_from_news(text):
 
+    # MERGE FIRST 2 LINES
     lines = text.splitlines()
 
-    first_line = lines[0]
+    merged = " ".join(lines[:2])
 
+    # REMOVE NEWS WORDS
     remove_words = [
         "officially announced",
         "release date",
         "coming soon",
-        "set to release"
+        "set to release",
+        "this summer 2026",
+        "( no specific date )",
+        "hindi dub"
     ]
 
-    cleaned = first_line
+    cleaned = merged
 
     for word in remove_words:
+
         cleaned = re.sub(
             word,
             '',
@@ -213,12 +219,16 @@ def clean_title_from_news(text):
             flags=re.IGNORECASE
         )
 
+    # REMOVE SEASON TEMP
     cleaned = re.sub(
         r'Season\s*\d+',
         '',
         cleaned,
         flags=re.IGNORECASE
     )
+
+    # CLEAN SPACES
+    cleaned = re.sub(r'\s+', ' ', cleaned)
 
     return cleaned.strip(" -!:")
 
