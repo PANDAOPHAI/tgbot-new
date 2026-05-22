@@ -662,31 +662,25 @@ def create_buttons(caption):
 
 async def main():
 
-    source_entities = []
-
     for source_id in SOURCE_IDS:
 
         entity = await client.get_entity(
             source_id
         )
 
-        source_entities.append(entity)
-
         print(
             "SOURCE LOADED:",
             entity.title
         )
 
-    @client.on(
-        events.NewMessage(
-            chats=source_entities
-        )
-    )
+    @client.on(events.NewMessage())
     async def handler(event):
 
         msg = event.message
 
         text = msg.text or ""
+
+        chat_id = event.chat_id
 
         print("\nNEW POST:")
         print(text)
@@ -695,9 +689,8 @@ async def main():
         # ADMIN COMMANDS
         # ====================================
 
-        if event.chat_id == ADMIN_CHANNEL_ID:
+        if chat_id == ADMIN_CHANNEL_ID:
 
-            # /ping
             if text.startswith("/ping"):
 
                 ping_ms = int(
@@ -705,13 +698,11 @@ async def main():
                 ) % 1000
 
                 await event.reply(
-                    f"🏓 Pong!\n"
-                    f"⚡ Ping: {ping_ms}ms"
+                    f"🏓 Pong!\n⚡ Ping: {ping_ms}ms"
                 )
 
                 return
 
-            # /stats
             if text.startswith("/stats"):
 
                 await event.reply(
@@ -731,7 +722,6 @@ async def main():
 
                 return
 
-            # /addsource
             if text.startswith("/addsource"):
 
                 try:
@@ -747,8 +737,7 @@ async def main():
                         )
 
                         await event.reply(
-                            f"✅ Source Added:\n"
-                            f"{source_id}"
+                            f"✅ Source Added:\n{source_id}"
                         )
 
                     else:
@@ -760,13 +749,11 @@ async def main():
                 except:
 
                     await event.reply(
-                        "❌ Usage:\n"
-                        "/addsource -100xxxx"
+                        "❌ Usage:\n/addsource -100xxxx"
                     )
 
                 return
 
-            # /addtarget
             if text.startswith("/addtarget"):
 
                 try:
@@ -782,8 +769,7 @@ async def main():
                         )
 
                         await event.reply(
-                            f"✅ Target Added:\n"
-                            f"{target_id}"
+                            f"✅ Target Added:\n{target_id}"
                         )
 
                     else:
@@ -795,11 +781,17 @@ async def main():
                 except:
 
                     await event.reply(
-                        "❌ Usage:\n"
-                        "/addtarget -100xxxx"
+                        "❌ Usage:\n/addtarget -100xxxx"
                     )
 
                 return
+
+        # ====================================
+        # IGNORE NON SOURCE CHANNELS
+        # ====================================
+
+        if chat_id not in SOURCE_IDS:
+            return
 
         # LOG
         await send_log(
@@ -860,45 +852,35 @@ async def main():
 
                 try:
 
-                    # PHOTO
+                    # SEND MEDIA
                     if msg.photo:
 
                         await client.send_file(
                             target,
-                            msg.photo,
-                            caption=new_caption,
-                            buttons=buttons
+                            msg.photo
                         )
 
-                    # VIDEO
                     elif msg.video:
 
                         await client.send_file(
                             target,
-                            msg.video,
-                            caption=new_caption,
-                            buttons=buttons
+                            msg.video
                         )
 
-                    # DOCUMENT
                     elif msg.document:
 
                         await client.send_file(
                             target,
-                            msg.document,
-                            caption=new_caption,
-                            buttons=buttons
+                            msg.document
                         )
 
-                    # TEXT
-                    else:
-
-                        await client.send_message(
-                            target,
-                            new_caption,
-                            buttons=buttons,
-                            link_preview=False
-                        )
+                    # SEND TEXT + BUTTONS
+                    await client.send_message(
+                        target,
+                        new_caption,
+                        buttons=buttons,
+                        link_preview=False
+                    )
 
                     print(
                         f"POST SENT TO {target}"
@@ -919,8 +901,7 @@ async def main():
                     stats["errors"] += 1
 
                     await send_log(
-                        f"❌ FAILED:\n"
-                        f"{target}\n\n{e}"
+                        f"❌ FAILED:\n{target}\n\n{e}"
                     )
 
         except Exception as e:
