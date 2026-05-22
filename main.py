@@ -6,7 +6,7 @@ import re
 import os
 
 # ====================================
-# FLASK SERVER (FOR RENDER)
+# FLASK SERVER
 # ====================================
 
 app = Flask(__name__)
@@ -36,11 +36,11 @@ TMDB_API_KEY = "f1e46d83ecce5dc29c90d9d2ed41f2ed"
 # CHANNEL IDS
 # ====================================
 
-SOURCE_ID = -1003682968695
-TARGET_ID = -1002444484223
+SOURCE_ID = -1003900368405
+TARGET_ID = -1003927415038
 
 # ====================================
-# CREATE CLIENT
+# CLIENT
 # ====================================
 
 client = TelegramClient("session", api_id, api_hash)
@@ -59,88 +59,34 @@ def get_url(text):
     return None
 
 # ====================================
+# NEWS POST CHECK
+# ====================================
+
+def is_news_post(text):
+
+    news_keywords = [
+        "officially announced",
+        "release date",
+        "coming soon",
+        "set to release",
+        "announced"
+    ]
+
+    text = text.lower()
+
+    for word in news_keywords:
+        if word in text:
+            return True
+
+    return False
+
+# ====================================
 # MOVIE CHECK
 # ====================================
 
 def is_movie(text):
 
-    text = text.lower()
-
-    return "movie" in text
-
-# ====================================
-# CLEAN TITLE
-# ====================================
-
-def clean_title(text):
-
-    url = get_url(text)
-
-    if url:
-
-        try:
-
-            slug = url.split("/")[-2]
-
-            remove_parts = [
-                "-movie",
-                "-season-1",
-                "-season-2",
-                "-season-3",
-                "-season-4",
-                "-season-5",
-                "-hindi-dubbed-episodes-download-hd",
-                "-episodes-download-hd",
-                "-episodes",
-                "-download",
-                "-hindi-dubbed",
-                "-english-dubbed",
-                "-tamil-dubbed",
-                "-telugu-dubbed",
-                "-multi-audio",
-                "-multi-sub",
-                "-subbed",
-                "-dubbed",
-                "-hd"
-            ]
-
-            for part in remove_parts:
-                slug = slug.replace(part, "")
-
-            slug = re.sub(r'-\d{4}', '', slug)
-
-            slug = re.sub(r'-season-\d+', '', slug)
-
-            slug = slug.replace("-", " ")
-
-            return slug.title().strip()
-
-        except:
-            pass
-
-    return None
-
-# ====================================
-# GET EPISODE
-# ====================================
-
-def get_episode(text):
-
-    # SUPPORTS:
-    # Episode 8
-    # Episode 3-4
-    # Episodes 1-12
-
-    match = re.search(
-        r'Episode[s]?\s*([\d\-]+)',
-        text,
-        re.IGNORECASE
-    )
-
-    if match:
-        return match.group(1)
-
-    return None
+    return "movie" in text.lower()
 
 # ====================================
 # GET SEASON
@@ -148,6 +94,17 @@ def get_episode(text):
 
 def get_season(text):
 
+    # Season 2
+    match = re.search(
+        r'Season\s*(\d+)',
+        text,
+        re.IGNORECASE
+    )
+
+    if match:
+        return match.group(1)
+
+    # URL season-2
     url = get_url(text)
 
     if url:
@@ -164,6 +121,110 @@ def get_season(text):
     return None
 
 # ====================================
+# GET EPISODE
+# ====================================
+
+def get_episode(text):
+
+    match = re.search(
+        r'Episode[s]?\s*([\d\-]+)',
+        text,
+        re.IGNORECASE
+    )
+
+    if match:
+        return match.group(1)
+
+    return None
+
+# ====================================
+# CLEAN TITLE FROM URL
+# ====================================
+
+def clean_title_from_url(text):
+
+    url = get_url(text)
+
+    if not url:
+        return None
+
+    try:
+
+        slug = url.split("/")[-2]
+
+        remove_patterns = [
+            r'-movie',
+            r'-season-\d+',
+            r'-episodes-hindi-subbed-download-hd',
+            r'-episodes-hindi-dubbed-download-hd',
+            r'-hindi-subbed-download-hd',
+            r'-hindi-dubbed-download-hd',
+            r'-episodes-download-hd',
+            r'-episodes',
+            r'-download',
+            r'-hindi-subbed',
+            r'-hindi-dubbed',
+            r'-english-subbed',
+            r'-english-dubbed',
+            r'-tamil-dubbed',
+            r'-telugu-dubbed',
+            r'-multi-audio',
+            r'-multi-sub',
+            r'-subbed',
+            r'-dubbed',
+            r'-hd',
+            r'-\d{4}'
+        ]
+
+        for pattern in remove_patterns:
+            slug = re.sub(pattern, '', slug)
+
+        slug = slug.replace("-", " ")
+
+        return slug.title().strip()
+
+    except:
+        return None
+
+# ====================================
+# CLEAN TITLE FROM NEWS POST
+# ====================================
+
+def clean_title_from_news(text):
+
+    lines = text.splitlines()
+
+    first_line = lines[0]
+
+    # REMOVE ANNOUNCEMENT WORDS
+    remove_words = [
+        "officially announced",
+        "release date",
+        "coming soon",
+        "set to release"
+    ]
+
+    cleaned = first_line
+
+    for word in remove_words:
+        cleaned = re.sub(
+            word,
+            '',
+            cleaned,
+            flags=re.IGNORECASE
+        )
+
+    # REMOVE SEASON
+    cleaned = re.sub(
+        r'Season\s*\d+',
+        '',
+        cleaned,
+        flags=re.IGNORECASE
+    )
+
+    return cleaned.strip(" -!:")
+
+# ====================================
 # DETECT LANGUAGE
 # ====================================
 
@@ -171,7 +232,6 @@ def get_language_type(text):
 
     text = text.lower()
 
-    # AUDIO TYPE
     if "multi-audio" in text:
         audio = "Multi Audio"
 
@@ -184,7 +244,6 @@ def get_language_type(text):
     else:
         audio = "Subbed"
 
-    # LANGUAGE
     if "hindi" in text:
         lang = "Hindi"
 
@@ -206,7 +265,7 @@ def get_language_type(text):
     return audio
 
 # ====================================
-# GET TMDB ID
+# TMDB SEARCH
 # ====================================
 
 def get_tmdb_id(title, movie=False):
@@ -229,33 +288,29 @@ def get_tmdb_id(title, movie=False):
 
         if data.get("results"):
 
-            first = data["results"][0]
+            return data["results"][0]["id"]
 
-            print("TMDB FOUND:", first.get("title") or first.get("name"))
-
-            return first["id"]
-
-    except Exception as e:
-        print("TMDB ERROR:", e)
+    except:
+        pass
 
     return None
 
 # ====================================
-# CREATE CAPTION
+# CREATE DOWNLOAD POST
 # ====================================
 
-def create_caption(text):
+def create_download_caption(text):
 
-    title = clean_title(text)
+    title = clean_title_from_url(text)
 
     if not title:
         return None
 
     movie = is_movie(text)
 
-    episode = get_episode(text)
-
     season = get_season(text)
+
+    episode = get_episode(text)
 
     language_type = get_language_type(text)
 
@@ -270,17 +325,15 @@ def create_caption(text):
     else:
         tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # TITLE LINE
     title_line = f"🎬 {title}"
 
     if season:
-        title_line += f" • Season {season}"
+        title_line += f" • Season {season.zfill(2)}"
 
     if episode:
         title_line += f" • Episode {episode}"
 
-    # FINAL CAPTION
-    caption = f"""
+    caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
@@ -294,9 +347,67 @@ def create_caption(text):
 ━━━━━━━━━━━━━━━
 🔥 Powered By TGFLIX
 ━━━━━━━━━━━━━━━
-"""
+'''
 
     return caption.strip()
+
+# ====================================
+# CREATE NEWS POST
+# ====================================
+
+def create_news_caption(text):
+
+    title = clean_title_from_news(text)
+
+    if not title:
+        return None
+
+    season = get_season(text)
+
+    tmdb_id = get_tmdb_id(title)
+
+    if not tmdb_id:
+        return None
+
+    tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
+
+    title_line = f"🎬 {title}"
+
+    if season:
+        title_line += f" • Season {season.zfill(2)}"
+
+    caption = f'''
+╭──────────────⭓
+┃ {title_line}
+╰──────────────⭓
+
+{text}
+
+🔗 WATCH S01 NOW:
+{tgflix_link}
+
+━━━━━━━━━━━━━━━
+🔥 Powered By TGFLIX
+━━━━━━━━━━━━━━━
+'''
+
+    return caption.strip()
+
+# ====================================
+# CREATE FINAL CAPTION
+# ====================================
+
+def create_caption(text):
+
+    # NEWS POSTS
+    if is_news_post(text):
+        return create_news_caption(text)
+
+    # DOWNLOAD POSTS
+    if "rareanimes.buzz" in text.lower():
+        return create_download_caption(text)
+
+    return None
 
 # ====================================
 # MAIN BOT
@@ -326,7 +437,6 @@ async def main():
 
         try:
 
-            # PHOTO
             if msg.photo:
 
                 await client.send_file(
@@ -335,7 +445,6 @@ async def main():
                     caption=new_caption
                 )
 
-            # VIDEO
             elif msg.video:
 
                 await client.send_file(
@@ -344,7 +453,6 @@ async def main():
                     caption=new_caption
                 )
 
-            # DOCUMENT
             elif msg.document:
 
                 await client.send_file(
@@ -353,7 +461,6 @@ async def main():
                     caption=new_caption
                 )
 
-            # TEXT / WEBPAGE
             else:
 
                 await client.send_message(
