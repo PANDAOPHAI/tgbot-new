@@ -94,7 +94,7 @@ def is_movie(text):
 
 def get_season(text):
 
-    # Season 2
+    # TEXT SEASON
     match = re.search(
         r'Season\s*(\d+)',
         text,
@@ -104,7 +104,7 @@ def get_season(text):
     if match:
         return match.group(1)
 
-    # URL season-2
+    # URL SEASON
     url = get_url(text)
 
     if url:
@@ -327,11 +327,28 @@ def create_download_caption(text):
     if not tmdb_id:
         return None
 
-    # TGFLIX LINK
+    # ====================================
+    # LINKS
+    # ====================================
+
+    # MAIN PAGE
     if movie:
         tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
     else:
         tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
+
+    # DIRECT PLAY LINK
+    play_link = None
+
+    if not movie and season and episode:
+
+        first_ep = episode.split("-")[0]
+
+        play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{first_ep}"
+
+    # ====================================
+    # TITLE
+    # ====================================
 
     title_line = f"🎬 {title}"
 
@@ -340,6 +357,10 @@ def create_download_caption(text):
 
     if episode:
         title_line += f" • Episode {episode}"
+
+    # ====================================
+    # CAPTION
+    # ====================================
 
     caption = f'''
 ╭──────────────⭓
@@ -351,6 +372,18 @@ def create_download_caption(text):
 
 🔗 WATCH NOW:
 {tgflix_link}
+'''
+
+    # DIRECT PLAY LINK
+    if play_link:
+
+        caption += f'''
+
+▶️ PLAY EPISODE:
+{play_link}
+'''
+
+    caption += '''
 
 ━━━━━━━━━━━━━━━
 🔥 Powered By TGFLIX
