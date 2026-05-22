@@ -342,24 +342,6 @@ def create_download_caption(text):
     else:
         tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # DIRECT PLAY
-    play_link = None
-
-    if not movie and season and episode:
-
-        first_ep = episode.split("-")[0]
-
-        play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{first_ep}"
-
-    # TITLE
-    title_line = f"🎬 {title}"
-
-    if season:
-        title_line += f" • Season {season.zfill(2)}"
-
-    if episode:
-        title_line += f" • Episode {episode}"
-
     # COMPLETE SEASON CHECK
     complete_season = False
 
@@ -371,7 +353,44 @@ def create_download_caption(text):
     if "zip pack" in text_lower:
         complete_season = True
 
+    # ====================================
+    # PLAY LINK
+    # ====================================
+
+    play_link = None
+
+    if not movie and season:
+
+        # DEFAULT EPISODE = 1
+        play_episode = "1"
+
+        # IF EPISODE EXISTS
+        if episode:
+
+            first_ep = episode.split("-")[0]
+
+            if first_ep.strip():
+                play_episode = first_ep
+
+        play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{play_episode}"
+
+    # ====================================
+    # TITLE
+    # ====================================
+
+    title_line = f"🎬 {title}"
+
+    if season:
+        title_line += f" • Season {season.zfill(2)}"
+
+    # ONLY ADD EPISODE IF EXISTS
+    if episode:
+        title_line += f" • Episode {episode}"
+
+    # ====================================
     # CAPTION
+    # ====================================
+
     caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
@@ -401,12 +420,12 @@ def create_download_caption(text):
 {tgflix_link}
 '''
 
-    # DIRECT PLAY
+    # PLAY LINK
     if play_link:
 
         caption += f'''
 
-▶️ PLAY EPISODE:
+▶️ PLAY NOW:
 {play_link}
 '''
 
