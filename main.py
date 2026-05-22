@@ -643,23 +643,11 @@ def create_caption(text):
 
 async def main():
 
-    source_entities = []
-
-    for source_id in SOURCE_IDS:
-
-        entity = await client.get_entity(
-            source_id
-        )
-
-        source_entities.append(entity)
-
-        print("SOURCE LOADED:", entity.title)
-
     await send_log(
         "🟢 TGFLIX BOT STARTED"
     )
 
-    @client.on(events.NewMessage(chats=source_entities))
+    @client.on(events.NewMessage())
     async def handler(event):
 
         msg = event.message
@@ -678,6 +666,7 @@ async def main():
 
         if chat_id == ADMIN_CHANNEL_ID:
 
+            # /help
             if text.startswith("/help"):
 
                 await event.reply(
@@ -692,13 +681,6 @@ async def main():
 📡 /sources
 🎯 /targets
 
-➕ /addsource -100xxxx
-➖ /removesource -100xxxx
-
-➕ /addtarget -100xxxx
-➖ /removetarget -100xxxx
-
-📢 /broadcast message
 📜 /logs
 🧪 /test
 
@@ -709,12 +691,112 @@ async def main():
 
                 return
 
+            # /ping
+            if text.startswith("/ping"):
+
+                ping_ms = round(
+                    client.loop.time() * 1000
+                ) % 1000
+
+                await event.reply(
+                    f'''
+🏓 PONG
+
+⚡ Ping: {ping_ms}ms
+'''
+                )
+
+                return
+
+            # /stats
+            if text.startswith("/stats"):
+
+                await event.reply(
+                    f'''
+📊 TGFLIX STATS
+
+✅ Sent: {stats['sent']}
+⚠️ Skipped: {stats['skipped']}
+❌ Errors: {stats['errors']}
+🧠 Duplicates: {stats['duplicates']}
+'''
+                )
+
+                return
+
+            # /status
+            if text.startswith("/status"):
+
+                active_targets = (
+                    len(TARGET_IDS)
+                    - len(paused_targets)
+                )
+
+                paused_count = len(paused_targets)
+
+                await event.reply(
+                    f'''
+🤖 TGFLIX STATUS
+
+🟢 Bot: ONLINE
+
+📡 Sources: {len(SOURCE_IDS)}
+🎯 Targets: {len(TARGET_IDS)}
+
+▶️ Active: {active_targets}
+⏸ Paused: {paused_count}
+
+🕒 Uptime:
+{get_uptime()}
+'''
+                )
+
+                return
+
+            # /logs
+            if text.startswith("/logs"):
+
+                if not recent_logs:
+
+                    await event.reply(
+                        "❌ No Logs"
+                    )
+
+                else:
+
+                    log_text = "\n\n".join(
+                        recent_logs[-10:]
+                    )
+
+                    await event.reply(
+                        f'''
+📜 RECENT LOGS
+
+{log_text}
+'''
+                    )
+
+                return
+
+            # /test
+            if text.startswith("/test"):
+
+                await event.reply(
+                    "✅ TEST SUCCESS"
+                )
+
+                return
+
         # ====================================
-        # SOURCE CHECK
+        # IGNORE NON SOURCE CHANNELS
         # ====================================
 
         if chat_id not in SOURCE_IDS:
             return
+
+        # ====================================
+        # CREATE CAPTION
+        # ====================================
 
         new_caption = create_caption(text)
 
@@ -748,9 +830,19 @@ async def main():
 
             stats["duplicates"] += 1
 
-            await add_recent_log(
+            duplicate_msg = (
                 f"🧠 DUPLICATE → {post_id}"
             )
+
+            await add_recent_log(
+                duplicate_msg
+            )
+
+            await send_log(
+                duplicate_msg
+            )
+
+            print(duplicate_msg)
 
             return
 
@@ -801,37 +893,37 @@ async def main():
 
                 stats["sent"] += 1
 
-                await add_recent_log(
+                sent_msg = (
                     f"✅ SENT → {target}"
                 )
 
-                await send_log(
-                    f"✅ SENT TO:\n{target}"
+                await add_recent_log(
+                    sent_msg
                 )
 
-                print(f"POST SENT TO {target}")
+                await send_log(
+                    sent_msg
+                )
+
+                print(sent_msg)
 
             except Exception as e:
 
                 stats["errors"] += 1
 
-                await add_recent_log(
+                error_msg = (
                     f"❌ ERROR → {e}"
                 )
 
-                await send_log(
-                    f'''
-❌ SEND ERROR
-
-TARGET:
-{target}
-
-ERROR:
-{e}
-'''
+                await add_recent_log(
+                    error_msg
                 )
 
-                print("SEND ERROR:", e)
+                await send_log(
+                    error_msg
+                )
+
+                print(error_msg)
 
     print("BOT RUNNING...")
 
