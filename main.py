@@ -462,48 +462,48 @@ def create_download_caption(text):
             f" • Episode {episode}"
         )
 
-    caption = f'''
+    caption = f"""
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
-'''
+"""
 
     if complete_season:
 
-        caption += f'''
+        caption += f"""
 
 📦 Complete Season Added
 🌐 Audio: {language_type}
 
 🔗 WATCH NOW:
 {tgflix_link}
-'''
+"""
 
     else:
 
-        caption += f'''
+        caption += f"""
 
 ✨ Status: Added
 🌐 Audio: {language_type}
 
 🔗 WATCH NOW:
 {tgflix_link}
-'''
+"""
 
     if play_link:
 
-        caption += f'''
+        caption += f"""
 
 ▶️ PLAY NOW:
 {play_link}
-'''
+"""
 
-    caption += '''
+    caption += """
 
 ━━━━━━━━━━━━━━━
 🔥 Powered By TGFLIX
 ━━━━━━━━━━━━━━━
-'''
+"""
 
     return caption.strip()
 
@@ -563,7 +563,7 @@ def create_news_caption(text):
             f" • Season {season.zfill(2)}"
         )
 
-    caption = f'''
+    caption = f"""
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
@@ -576,7 +576,7 @@ def create_news_caption(text):
 ━━━━━━━━━━━━━━━
 🔥 Powered By TGFLIX
 ━━━━━━━━━━━━━━━
-'''
+"""
 
     return caption.strip()
 
@@ -793,10 +793,17 @@ async def main():
         if chat_id not in SOURCE_IDS:
             return
 
+        # ====================================
         # LOG
+        # ====================================
+
         await send_log(
             f"📥 NEW POST:\n\n{text[:300]}"
         )
+
+        # ====================================
+        # CREATE CAPTION
+        # ====================================
 
         new_caption = create_caption(text)
 
@@ -842,9 +849,17 @@ async def main():
 
         sent_cache.add(post_id)
 
+        # ====================================
+        # BUTTONS
+        # ====================================
+
         buttons = create_buttons(
             new_caption
         )
+
+        # ====================================
+        # SEND
+        # ====================================
 
         try:
 
@@ -852,35 +867,26 @@ async def main():
 
                 try:
 
-                    # SEND MEDIA
-                    if msg.photo:
+                    # MEDIA + CAPTION + BUTTONS
+                    if msg.media:
 
                         await client.send_file(
                             target,
-                            msg.photo
+                            file=msg.media,
+                            caption=new_caption,
+                            buttons=buttons,
+                            link_preview=False
                         )
 
-                    elif msg.video:
+                    # TEXT ONLY
+                    else:
 
-                        await client.send_file(
+                        await client.send_message(
                             target,
-                            msg.video
+                            new_caption,
+                            buttons=buttons,
+                            link_preview=False
                         )
-
-                    elif msg.document:
-
-                        await client.send_file(
-                            target,
-                            msg.document
-                        )
-
-                    # SEND TEXT + BUTTONS
-                    await client.send_message(
-                        target,
-                        new_caption,
-                        buttons=buttons,
-                        link_preview=False
-                    )
 
                     print(
                         f"POST SENT TO {target}"
