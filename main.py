@@ -33,12 +33,18 @@ api_hash = "817ab8acbb95ae9ad02b74bd83ccbea2"
 TMDB_API_KEY = "f1e46d83ecce5dc29c90d9d2ed41f2ed"
 
 # ====================================
-# CHANNEL IDS
+# MULTIPLE SOURCE CHANNELS
 # ====================================
 
-SOURCE_ID = -1003682968695
+SOURCE_IDS = [
+    -1003900368405,
+    -1003682968695
+]
 
+# ====================================
 # MULTIPLE TARGET CHANNELS
+# ====================================
+
 TARGET_IDS = [
     -1003927415038,
     -1002444484223
@@ -162,6 +168,7 @@ def clean_title_from_url(text):
             r'-season-\d+',
             r'-episodes-hindi-subbed-download-hd',
             r'-episodes-hindi-dubbed-download-hd',
+            r'-hindi-episodes-download-hd',
             r'-hindi-subbed-download-hd',
             r'-hindi-dubbed-download-hd',
             r'-episodes-download-hd',
@@ -178,6 +185,7 @@ def clean_title_from_url(text):
             r'-subbed',
             r'-dubbed',
             r'-hd',
+            r'-zip-pack',
             r'-\d{4}'
         ]
 
@@ -197,12 +205,10 @@ def clean_title_from_url(text):
 
 def clean_title_from_news(text):
 
-    # MERGE FIRST 2 LINES
     lines = text.splitlines()
 
     merged = " ".join(lines[:2])
 
-    # REMOVE NEWS WORDS
     remove_words = [
         "officially announced",
         "release date",
@@ -224,7 +230,6 @@ def clean_title_from_news(text):
             flags=re.IGNORECASE
         )
 
-    # REMOVE SEASON TEMP
     cleaned = re.sub(
         r'Season\s*\d+',
         '',
@@ -232,7 +237,6 @@ def clean_title_from_news(text):
         flags=re.IGNORECASE
     )
 
-    # CLEAN SPACES
     cleaned = re.sub(r'\s+', ' ', cleaned)
 
     return cleaned.strip(" -!:")
@@ -303,8 +307,8 @@ def get_tmdb_id(title, movie=False):
 
             return data["results"][0]["id"]
 
-    except:
-        pass
+    except Exception as e:
+        print("TMDB ERROR:", e)
 
     return None
 
@@ -332,17 +336,13 @@ def create_download_caption(text):
     if not tmdb_id:
         return None
 
-    # ====================================
-    # LINKS
-    # ====================================
-
     # MAIN PAGE
     if movie:
         tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
     else:
         tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # DIRECT PLAY LINK
+    # DIRECT PLAY
     play_link = None
 
     if not movie and season and episode:
@@ -351,10 +351,7 @@ def create_download_caption(text):
 
         play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{first_ep}"
 
-    # ====================================
     # TITLE
-    # ====================================
-
     title_line = f"🎬 {title}"
 
     if season:
@@ -363,14 +360,39 @@ def create_download_caption(text):
     if episode:
         title_line += f" • Episode {episode}"
 
-    # ====================================
-    # CAPTION
-    # ====================================
+    # COMPLETE SEASON CHECK
+    complete_season = False
 
+    text_lower = text.lower()
+
+    if "complete season" in text_lower:
+        complete_season = True
+
+    if "zip pack" in text_lower:
+        complete_season = True
+
+    # CAPTION
     caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
+'''
+
+    # COMPLETE SEASON OUTPUT
+    if complete_season:
+
+        caption += f'''
+
+📦 Complete Season Added
+🌐 Audio: {language_type}
+
+🔗 WATCH NOW:
+{tgflix_link}
+'''
+
+    else:
+
+        caption += f'''
 
 ✨ Status: Added
 🌐 Audio: {language_type}
@@ -379,7 +401,7 @@ def create_download_caption(text):
 {tgflix_link}
 '''
 
-    # DIRECT PLAY LINK
+    # DIRECT PLAY
     if play_link:
 
         caption += f'''
@@ -417,7 +439,7 @@ def create_news_caption(text):
 
     tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # CLEAN UNWANTED LINES
+    # CLEAN TEXT
     lines = text.splitlines()
 
     cleaned_lines = []
@@ -435,6 +457,7 @@ def create_news_caption(text):
         skip = False
 
         for word in blocked_words:
+
             if word in line_lower:
                 skip = True
                 break
@@ -444,13 +467,13 @@ def create_news_caption(text):
 
     cleaned_text = "\n\n".join(cleaned_lines)
 
-    # TITLE LINE
+    # TITLE
     title_line = f"🎬 {title}"
 
     if season:
         title_line += f" • Season {season.zfill(2)}"
 
-    # FINAL DESIGN
+    # FINAL CAPTION
     caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
@@ -474,12 +497,32 @@ def create_news_caption(text):
 
 def create_caption(text):
 
+    text_lower = text.lower()
+
     # NEWS POSTS
     if is_news_post(text):
         return create_news_caption(text)
 
     # DOWNLOAD POSTS
-    if "rareanimes.buzz" in text.lower():
+    download_keywords = [
+        "rareanimes.buzz",
+        "episode",
+        "episodes",
+        "movie",
+        "complete season",
+        "zip pack",
+        "added"
+    ]
+
+    matched = False
+
+    for word in download_keywords:
+
+        if word in text_lower:
+            matched = True
+            break
+
+    if matched:
         return create_download_caption(text)
 
     return None
@@ -490,11 +533,19 @@ def create_caption(text):
 
 async def main():
 
-    source_entity = await client.get_entity(SOURCE_ID)
+    # LOAD SOURCES
+    source_entities = []
 
-    print("SOURCE LOADED:", source_entity.title)
+    for source_id in SOURCE_IDS:
 
-    @client.on(events.NewMessage(chats=source_entity))
+        entity = await client.get_entity(source_id)
+
+        source_entities.append(entity)
+
+        print("SOURCE LOADED:", entity.title)
+
+    # LISTEN TO ALL SOURCES
+    @client.on(events.NewMessage(chats=source_entities))
     async def handler(event):
 
         msg = event.message
@@ -512,7 +563,7 @@ async def main():
 
         try:
 
-            # SEND TO ALL TARGET CHANNELS
+            # SEND TO ALL TARGETS
             for target in TARGET_IDS:
 
                 try:
