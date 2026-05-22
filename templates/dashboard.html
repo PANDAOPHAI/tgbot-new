@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>TGFLIX Dashboard</title>
+
+    <style>
+
+        body{
+            background:#0f0f0f;
+            color:white;
+            font-family:Arial;
+            margin:0;
+            padding:0;
+        }
+
+        .container{
+            width:90%;
+            margin:auto;
+            margin-top:30px;
+        }
+
+        h1{
+            text-align:center;
+            color:#ff0055;
+        }
+
+        .card{
+            background:#1b1b1b;
+            padding:20px;
+            margin-top:20px;
+            border-radius:15px;
+            box-shadow:0 0 10px rgba(0,0,0,0.5);
+        }
+
+        h2{
+            margin-top:0;
+            color:#ff0055;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            border:none;
+            border-radius:10px;
+            margin-top:10px;
+            background:#2b2b2b;
+            color:white;
+            font-size:16px;
+            box-sizing:border-box;
+        }
+
+        button{
+            margin-top:10px;
+            padding:12px;
+            width:100%;
+            border:none;
+            border-radius:10px;
+            background:#ff0055;
+            color:white;
+            cursor:pointer;
+            font-size:16px;
+            font-weight:bold;
+            transition:0.3s;
+        }
+
+        button:hover{
+            background:#ff3377;
+        }
+
+        p{
+            font-size:17px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🔥 TGFLIX DASHBOARD</h1>
+
+    <div class="card">
+
+        <h2>Bot Status</h2>
+
+        <p>🟢 ONLINE</p>
+
+        <p>📡 Sources: {{ sources }}</p>
+
+        <p>🎯 Targets: {{ targets }}</p>
+
+        <p>✅ Sent: {{ sent }}</p>
+
+        <p>❌ Errors: {{ errors }}</p>
+
+        <p>🧠 Duplicates: {{ duplicates }}</p>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Add Source</h2>
+
+        <form method="POST" action="/addsource">
+
+            <input
+                type="text"
+                name="source_id"
+                placeholder="-100xxxx"
+            >
+
+            <button type="submit">
+                Add Source
+            </button>
+
+        </form>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Add Target</h2>
+
+        <form method="POST" action="/addtarget">
+
+            <input
+                type="text"
+                name="target_id"
+                placeholder="-100xxxx"
+            >
+
+            <button type="submit">
+                Add Target
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+</html>
