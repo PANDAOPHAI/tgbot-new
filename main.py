@@ -4,6 +4,7 @@ import threading
 import requests
 import re
 import os
+import time
 
 # ====================================
 # FLASK SERVER
@@ -55,6 +56,7 @@ TARGET_IDS = [
 # ====================================
 
 ADMIN_CHANNEL_ID = -1003999952586
+LOG_CHANNEL_ID = -1003999952586
 
 # ====================================
 # CLIENT
@@ -69,7 +71,8 @@ client = TelegramClient("session", api_id, api_hash)
 stats = {
     "sent": 0,
     "skipped": 0,
-    "errors": 0
+    "errors": 0,
+    "duplicates": 0
 }
 
 # ====================================
@@ -77,6 +80,29 @@ stats = {
 # ====================================
 
 sent_cache = set()
+
+# ====================================
+# BOT START TIME
+# ====================================
+
+start_time = time.time()
+
+# ====================================
+# SEND LOG
+# ====================================
+
+async def send_log(message):
+
+    try:
+
+        await client.send_message(
+            LOG_CHANNEL_ID,
+            message
+        )
+
+    except Exception as e:
+
+        print("LOG ERROR:", e)
 
 # ====================================
 # GET URL
@@ -127,7 +153,6 @@ def is_movie(text):
 
 def get_season(text):
 
-    # TEXT SEASON
     match = re.search(
         r'Season\s*(\d+)',
         text,
@@ -137,7 +162,6 @@ def get_season(text):
     if match:
         return match.group(1)
 
-    # URL SEASON
     url = get_url(text)
 
     if url:
@@ -370,13 +394,11 @@ def create_download_caption(text):
     if not tmdb_id:
         return None
 
-    # MAIN PAGE
     if movie:
         tgflix_link = f"https://tgflix.lovable.app/movie/{tmdb_id}"
     else:
         tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # COMPLETE SEASON CHECK
     complete_season = False
 
     text_lower = text.lower()
@@ -387,7 +409,6 @@ def create_download_caption(text):
     if "zip pack" in text_lower:
         complete_season = True
 
-    # PLAY LINK
     play_link = None
 
     if not movie and season:
@@ -403,7 +424,6 @@ def create_download_caption(text):
 
         play_link = f"https://tgflix.lovable.app/play-series/{tmdb_id}/{season}/{play_episode}"
 
-    # TITLE
     title_line = f"🎬 {title}"
 
     if season:
@@ -412,14 +432,12 @@ def create_download_caption(text):
     if episode:
         title_line += f" • Episode {episode}"
 
-    # CAPTION
     caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
 ╰──────────────⭓
 '''
 
-    # COMPLETE SEASON OUTPUT
     if complete_season:
 
         caption += f'''
@@ -442,7 +460,6 @@ def create_download_caption(text):
 {tgflix_link}
 '''
 
-    # PLAY LINK
     if play_link:
 
         caption += f'''
@@ -480,7 +497,6 @@ def create_news_caption(text):
 
     tgflix_link = f"https://tgflix.lovable.app/series/{tmdb_id}"
 
-    # CLEAN TEXT
     lines = text.splitlines()
 
     cleaned_lines = []
@@ -508,13 +524,11 @@ def create_news_caption(text):
 
     cleaned_text = "\n\n".join(cleaned_lines)
 
-    # TITLE
     title_line = f"🎬 {title}"
 
     if season:
         title_line += f" • Season {season.zfill(2)}"
 
-    # FINAL CAPTION
     caption = f'''
 ╭──────────────⭓
 ┃ {title_line}
@@ -540,11 +554,9 @@ def create_caption(text):
 
     text_lower = text.lower()
 
-    # NEWS POSTS
     if is_news_post(text):
         return create_news_caption(text)
 
-    # DOWNLOAD POSTS
     download_keywords = [
         "rareanimes.buzz",
         "episode",
@@ -569,6 +581,20 @@ def create_caption(text):
     return None
 
 # ====================================
+# UPTIME
+# ====================================
+
+def get_uptime():
+
+    seconds = int(time.time() - start_time)
+
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    return f"{hours}h {minutes}m {secs}s"
+
+# ====================================
 # MAIN BOT
 # ====================================
 
@@ -583,6 +609,8 @@ async def main():
         source_entities.append(entity)
 
         print("SOURCE LOADED:", entity.title)
+
+    await send_log("🟢 TGFLIX BOT STARTED")
 
     @client.on(events.NewMessage())
     async def handler(event):
@@ -605,8 +633,30 @@ async def main():
             # /ping
             if text.startswith("/ping"):
 
+                ping_ms = round(
+                    client.loop.time() * 1000
+                ) % 1000
+
                 await event.reply(
-                    "🏓 Pong!"
+                    f'''
+🏓 PONG!
+
+⚡ Ping: {ping_ms}ms
+🟢 Status: Online
+'''
+                )
+
+                return
+
+            # /uptime
+            if text.startswith("/uptime"):
+
+                await event.reply(
+                    f'''
+⏰ BOT UPTIME
+
+{get_uptime()}
+'''
                 )
 
                 return
@@ -615,18 +665,53 @@ async def main():
             if text.startswith("/stats"):
 
                 await event.reply(
-                    f"""
+                    f'''
 📊 TGFLIX BOT STATS
 
 ✅ Sent: {stats['sent']}
 ⚠️ Skipped: {stats['skipped']}
 ❌ Errors: {stats['errors']}
+🧠 Duplicates: {stats['duplicates']}
 
 📡 Sources: {len(SOURCE_IDS)}
 🎯 Targets: {len(TARGET_IDS)}
 
-🧠 Duplicate Cache: {len(sent_cache)}
-"""
+🕒 Uptime: {get_uptime()}
+'''
+                )
+
+                return
+
+            # /sources
+            if text.startswith("/sources"):
+
+                source_text = "\n".join(
+                    [str(x) for x in SOURCE_IDS]
+                )
+
+                await event.reply(
+                    f'''
+📡 SOURCE CHANNELS
+
+{source_text}
+'''
+                )
+
+                return
+
+            # /targets
+            if text.startswith("/targets"):
+
+                target_text = "\n".join(
+                    [str(x) for x in TARGET_IDS]
+                )
+
+                await event.reply(
+                    f'''
+🎯 TARGET CHANNELS
+
+{target_text}
+'''
                 )
 
                 return
@@ -646,6 +731,10 @@ async def main():
 
                         await event.reply(
                             f"✅ Source Added:\n{new_source}"
+                        )
+
+                        await send_log(
+                            f"📡 NEW SOURCE ADDED:\n{new_source}"
                         )
 
                     else:
@@ -679,6 +768,10 @@ async def main():
                             f"✅ Target Added:\n{new_target}"
                         )
 
+                        await send_log(
+                            f"🎯 NEW TARGET ADDED:\n{new_target}"
+                        )
+
                     else:
 
                         await event.reply(
@@ -690,6 +783,41 @@ async def main():
                     await event.reply(
                         "❌ Usage:\n/addtarget -100xxxx"
                     )
+
+                return
+
+            # /help
+            if text.startswith("/help"):
+
+                await event.reply(
+                    '''
+🤖 TGFLIX BOT COMMANDS
+
+🏓 /ping
+Check bot ping
+
+📊 /stats
+Show bot stats
+
+⏰ /uptime
+Show uptime
+
+📡 /sources
+Show source channels
+
+🎯 /targets
+Show target channels
+
+➕ /addsource -100xxxx
+Add source channel
+
+➕ /addtarget -100xxxx
+Add target channel
+
+❓ /help
+Show all commands
+'''
+                )
 
                 return
 
@@ -730,7 +858,11 @@ async def main():
 
             print("DUPLICATE SKIPPED")
 
-            stats["skipped"] += 1
+            stats["duplicates"] += 1
+
+            await send_log(
+                f"⚠️ DUPLICATE SKIPPED:\n{post_id}"
+            )
 
             return
 
@@ -783,17 +915,41 @@ async def main():
 
                     print(f"POST SENT TO {target}")
 
+                    await send_log(
+                        f"✅ SENT TO:\n{target}"
+                    )
+
                 except Exception as e:
 
                     stats["errors"] += 1
 
                     print(f"FAILED {target}: {e}")
 
+                    await send_log(
+                        f'''
+❌ SEND ERROR
+
+TARGET:
+{target}
+
+ERROR:
+{e}
+'''
+                    )
+
         except Exception as e:
 
             stats["errors"] += 1
 
             print("SEND ERROR:", e)
+
+            await send_log(
+                f'''
+🚨 MAIN ERROR
+
+{e}
+'''
+            )
 
     print("BOT RUNNING...")
 
