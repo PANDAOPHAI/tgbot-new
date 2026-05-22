@@ -80,21 +80,11 @@ stats = {
 }
 
 # ====================================
-# DUPLICATE CACHE
+# CACHE / LOGS
 # ====================================
 
 sent_cache = set()
-
-# ====================================
-# PAUSED TARGETS
-# ====================================
-
 paused_targets = set()
-
-# ====================================
-# RECENT LOGS
-# ====================================
-
 recent_logs = []
 
 # ====================================
@@ -624,16 +614,10 @@ def create_caption(text):
         "added"
     ]
 
-    matched = False
-
     for word in download_keywords:
 
         if word in text_lower:
-            matched = True
-            break
-
-    if matched:
-        return create_download_caption(text)
+            return create_download_caption(text)
 
     return None
 
@@ -666,7 +650,6 @@ async def main():
 
         if chat_id == ADMIN_CHANNEL_ID:
 
-            # /help
             if text.startswith("/help"):
 
                 await event.reply(
@@ -681,18 +664,25 @@ async def main():
 📡 /sources
 🎯 /targets
 
+➕ /addsource -100xxxx
+➖ /removesource -100xxxx
+
+➕ /addtarget -100xxxx
+➖ /removetarget -100xxxx
+
+📢 /broadcast message
 📜 /logs
 🧪 /test
 
 ⏸ /pause -100xxxx
 ▶️ /unpause -100xxxx
+
+❓ /help
 '''
                 )
-
                 return
 
-            # /ping
-            if text.startswith("/ping"):
+            elif text.startswith("/ping"):
 
                 ping_ms = round(
                     client.loop.time() * 1000
@@ -703,13 +693,12 @@ async def main():
 🏓 PONG
 
 ⚡ Ping: {ping_ms}ms
+🟢 Bot Online
 '''
                 )
-
                 return
 
-            # /stats
-            if text.startswith("/stats"):
+            elif text.startswith("/stats"):
 
                 await event.reply(
                     f'''
@@ -721,11 +710,9 @@ async def main():
 🧠 Duplicates: {stats['duplicates']}
 '''
                 )
-
                 return
 
-            # /status
-            if text.startswith("/status"):
+            elif text.startswith("/status"):
 
                 active_targets = (
                     len(TARGET_IDS)
@@ -743,23 +730,279 @@ async def main():
 📡 Sources: {len(SOURCE_IDS)}
 🎯 Targets: {len(TARGET_IDS)}
 
-▶️ Active: {active_targets}
-⏸ Paused: {paused_count}
+▶️ Active Targets: {active_targets}
+⏸ Paused Targets: {paused_count}
 
 🕒 Uptime:
 {get_uptime()}
 '''
                 )
+                return
+
+            elif text.startswith("/uptime"):
+
+                await event.reply(
+                    f'''
+⏰ BOT UPTIME
+
+{get_uptime()}
+'''
+                )
+                return
+
+            elif text.startswith("/sources"):
+
+                source_text = ""
+
+                for source_id in SOURCE_IDS:
+
+                    try:
+
+                        entity = await client.get_entity(
+                            source_id
+                        )
+
+                        source_text += (
+                            f"• {entity.title}\n"
+                            f"`{source_id}`\n\n"
+                        )
+
+                    except:
+
+                        source_text += (
+                            f"• Unknown Channel\n"
+                            f"`{source_id}`\n\n"
+                        )
+
+                await event.reply(
+                    f'''
+📡 TOTAL SOURCES:
+{len(SOURCE_IDS)}
+
+{source_text}
+'''
+                )
+                return
+
+            elif text.startswith("/targets"):
+
+                target_text = ""
+
+                for target_id in TARGET_IDS:
+
+                    try:
+
+                        entity = await client.get_entity(
+                            target_id
+                        )
+
+                        status = (
+                            "⏸ PAUSED"
+                            if target_id in paused_targets
+                            else "🟢 ACTIVE"
+                        )
+
+                        target_text += (
+                            f"• {entity.title}\n"
+                            f"`{target_id}`\n"
+                            f"{status}\n\n"
+                        )
+
+                    except:
+
+                        target_text += (
+                            f"• Unknown Channel\n"
+                            f"`{target_id}`\n\n"
+                        )
+
+                await event.reply(
+                    f'''
+🎯 TOTAL TARGETS:
+{len(TARGET_IDS)}
+
+{target_text}
+'''
+                )
+                return
+
+            elif text.startswith("/addsource"):
+
+                try:
+
+                    new_source = int(
+                        text.split(" ")[1]
+                    )
+
+                    if new_source not in SOURCE_IDS:
+
+                        SOURCE_IDS.append(new_source)
+
+                        await event.reply(
+                            f"✅ SOURCE ADDED\n\n{new_source}"
+                        )
+
+                    else:
+
+                        await event.reply(
+                            "⚠️ Source Already Exists"
+                        )
+
+                except:
+
+                    await event.reply(
+                        "❌ Usage:\n/addsource -100xxxx"
+                    )
 
                 return
 
-            # /logs
-            if text.startswith("/logs"):
+            elif text.startswith("/removesource"):
+
+                try:
+
+                    remove_id = int(
+                        text.split(" ")[1]
+                    )
+
+                    if remove_id in SOURCE_IDS:
+
+                        SOURCE_IDS.remove(remove_id)
+
+                        await event.reply(
+                            f"✅ SOURCE REMOVED\n\n{remove_id}"
+                        )
+
+                    else:
+
+                        await event.reply(
+                            "❌ Source Not Found"
+                        )
+
+                except:
+
+                    await event.reply(
+                        "❌ Usage:\n/removesource -100xxxx"
+                    )
+
+                return
+
+            elif text.startswith("/addtarget"):
+
+                try:
+
+                    new_target = int(
+                        text.split(" ")[1]
+                    )
+
+                    if new_target not in TARGET_IDS:
+
+                        TARGET_IDS.append(new_target)
+
+                        await event.reply(
+                            f"✅ TARGET ADDED\n\n{new_target}"
+                        )
+
+                    else:
+
+                        await event.reply(
+                            "⚠️ Target Already Exists"
+                        )
+
+                except:
+
+                    await event.reply(
+                        "❌ Usage:\n/addtarget -100xxxx"
+                    )
+
+                return
+
+            elif text.startswith("/removetarget"):
+
+                try:
+
+                    remove_id = int(
+                        text.split(" ")[1]
+                    )
+
+                    if remove_id in TARGET_IDS:
+
+                        TARGET_IDS.remove(remove_id)
+
+                        await event.reply(
+                            f"✅ TARGET REMOVED\n\n{remove_id}"
+                        )
+
+                    else:
+
+                        await event.reply(
+                            "❌ Target Not Found"
+                        )
+
+                except:
+
+                    await event.reply(
+                        "❌ Usage:\n/removetarget -100xxxx"
+                    )
+
+                return
+
+            elif text.startswith("/broadcast"):
+
+                try:
+
+                    broadcast_text = text.replace(
+                        "/broadcast",
+                        ""
+                    ).strip()
+
+                    if not broadcast_text:
+
+                        await event.reply(
+                            "❌ Give Broadcast Message"
+                        )
+                        return
+
+                    sent_count = 0
+
+                    for target in TARGET_IDS:
+
+                        if target in paused_targets:
+                            continue
+
+                        try:
+
+                            await client.send_message(
+                                target,
+                                broadcast_text
+                            )
+
+                            sent_count += 1
+
+                        except:
+                            pass
+
+                    await event.reply(
+                        f'''
+📢 BROADCAST SENT
+
+🎯 Sent To:
+{sent_count} Targets
+'''
+                    )
+
+                except Exception as e:
+
+                    await event.reply(
+                        f"❌ ERROR:\n{e}"
+                    )
+
+                return
+
+            elif text.startswith("/logs"):
 
                 if not recent_logs:
 
                     await event.reply(
-                        "❌ No Logs"
+                        "❌ No Logs Found"
                     )
 
                 else:
@@ -778,12 +1021,110 @@ async def main():
 
                 return
 
-            # /test
-            if text.startswith("/test"):
+            elif text.startswith("/test"):
+
+                test_caption = '''
+╭──────────────⭓
+┃ 🎬 TGFLIX TEST POST
+╰──────────────⭓
+
+✨ Bot Working Perfectly
+
+🔗 WATCH NOW:
+https://tgflix.lovable.app/
+
+━━━━━━━━━━━━━━━
+🔥 Powered By TGFLIX
+━━━━━━━━━━━━━━━
+'''
+
+                sent = 0
+
+                for target in TARGET_IDS:
+
+                    if target in paused_targets:
+                        continue
+
+                    try:
+
+                        await client.send_message(
+                            target,
+                            test_caption
+                        )
+
+                        sent += 1
+
+                    except:
+                        pass
 
                 await event.reply(
-                    "✅ TEST SUCCESS"
+                    f'''
+✅ TEST SENT
+
+🎯 Total Targets:
+{sent}
+'''
                 )
+
+                return
+
+            elif text.startswith("/pause"):
+
+                try:
+
+                    target_id = int(
+                        text.split(" ")[1]
+                    )
+
+                    paused_targets.add(target_id)
+
+                    await event.reply(
+                        f'''
+⏸ TARGET PAUSED
+
+{target_id}
+'''
+                    )
+
+                except:
+
+                    await event.reply(
+                        "❌ Usage:\n/pause -100xxxx"
+                    )
+
+                return
+
+            elif text.startswith("/unpause"):
+
+                try:
+
+                    target_id = int(
+                        text.split(" ")[1]
+                    )
+
+                    if target_id in paused_targets:
+
+                        paused_targets.remove(target_id)
+
+                        await event.reply(
+                            f'''
+🟢 TARGET UNPAUSED
+
+{target_id}
+'''
+                        )
+
+                    else:
+
+                        await event.reply(
+                            "❌ Target Not Paused"
+                        )
+
+                except:
+
+                    await event.reply(
+                        "❌ Usage:\n/unpause -100xxxx"
+                    )
 
                 return
 
@@ -841,8 +1182,6 @@ async def main():
             await send_log(
                 duplicate_msg
             )
-
-            print(duplicate_msg)
 
             return
 
@@ -905,8 +1244,6 @@ async def main():
                     sent_msg
                 )
 
-                print(sent_msg)
-
             except Exception as e:
 
                 stats["errors"] += 1
@@ -922,8 +1259,6 @@ async def main():
                 await send_log(
                     error_msg
                 )
-
-                print(error_msg)
 
     print("BOT RUNNING...")
 
