@@ -1,4 +1,8 @@
 from telethon import TelegramClient, events, Button
+from telethon.tl.types import (
+    MessageMediaPhoto,
+    MessageMediaDocument
+)
 from flask import Flask
 import threading
 import requests
@@ -122,7 +126,7 @@ def get_url(text):
 
 def is_news_post(text):
 
-    news_keywords = [
+    keywords = [
         "officially announced",
         "release date",
         "coming soon",
@@ -132,7 +136,7 @@ def is_news_post(text):
 
     text = text.lower()
 
-    for word in news_keywords:
+    for word in keywords:
 
         if word in text:
             return True
@@ -207,7 +211,7 @@ def create_post_id(title, season, episode):
     return f"{title}|{season}|{episode}"
 
 # ====================================
-# CLEAN TITLE FROM URL
+# CLEAN TITLE
 # ====================================
 
 def clean_title_from_url(text):
@@ -263,7 +267,7 @@ def clean_title_from_url(text):
         return None
 
 # ====================================
-# CLEAN TITLE FROM NEWS
+# CLEAN NEWS TITLE
 # ====================================
 
 def clean_title_from_news(text):
@@ -384,7 +388,7 @@ def get_tmdb_id(title, movie=False):
     return None
 
 # ====================================
-# CREATE DOWNLOAD POST
+# CREATE DOWNLOAD CAPTION
 # ====================================
 
 def create_download_caption(text):
@@ -410,6 +414,7 @@ def create_download_caption(text):
     if not tmdb_id:
         return None
 
+    # WATCH LINK
     if movie:
 
         tgflix_link = (
@@ -422,16 +427,7 @@ def create_download_caption(text):
             f"https://tgflix.lovable.app/series/{tmdb_id}"
         )
 
-    complete_season = False
-
-    text_lower = text.lower()
-
-    if "complete season" in text_lower:
-        complete_season = True
-
-    if "zip pack" in text_lower:
-        complete_season = True
-
+    # PLAY LINK
     play_link = None
 
     if not movie and season:
@@ -450,6 +446,18 @@ def create_download_caption(text):
             f"{tmdb_id}/{season}/{play_episode}"
         )
 
+    # COMPLETE SEASON
+    complete_season = False
+
+    text_lower = text.lower()
+
+    if "complete season" in text_lower:
+        complete_season = True
+
+    if "zip pack" in text_lower:
+        complete_season = True
+
+    # TITLE
     title_line = f"🎬 {title}"
 
     if season:
@@ -499,7 +507,7 @@ def create_download_caption(text):
     return caption.strip()
 
 # ====================================
-# CREATE NEWS POST
+# CREATE NEWS CAPTION
 # ====================================
 
 def create_news_caption(text):
@@ -572,7 +580,7 @@ def create_news_caption(text):
     return caption.strip()
 
 # ====================================
-# CREATE CAPTION
+# CREATE FINAL CAPTION
 # ====================================
 
 def create_caption(text):
@@ -582,7 +590,7 @@ def create_caption(text):
     if is_news_post(text):
         return create_news_caption(text)
 
-    download_keywords = [
+    keywords = [
         "rareanimes.buzz",
         "episode",
         "episodes",
@@ -592,16 +600,10 @@ def create_caption(text):
         "added"
     ]
 
-    matched = False
-
-    for word in download_keywords:
+    for word in keywords:
 
         if word in text_lower:
-            matched = True
-            break
-
-    if matched:
-        return create_download_caption(text)
+            return create_download_caption(text)
 
     return None
 
@@ -613,6 +615,7 @@ def create_buttons(caption):
 
     buttons = []
 
+    # WATCH BUTTON
     watch_match = re.search(
         r'https://tgflix\.lovable\.app/(series|movie)/\d+',
         caption
@@ -620,15 +623,14 @@ def create_buttons(caption):
 
     if watch_match:
 
-        watch_link = watch_match.group(0)
-
         buttons.append([
             Button.url(
                 "🎬 WATCH NOW",
-                watch_link
+                watch_match.group(0)
             )
         ])
 
+    # PLAY BUTTON
     play_match = re.search(
         r'https://tgflix\.lovable\.app/play-series/\d+/\d+/\d+',
         caption
@@ -636,12 +638,10 @@ def create_buttons(caption):
 
     if play_match:
 
-        play_link = play_match.group(0)
-
         buttons.append([
             Button.url(
                 "▶️ PLAY NOW",
-                play_link
+                play_match.group(0)
             )
         ])
 
@@ -794,13 +794,13 @@ async def main():
 
                 try:
 
-                    media_sent = False
-
-                    # REAL MEDIA ONLY
-                    if (
-                        msg.photo or
-                        msg.video or
-                        msg.document
+                    # REAL TELEGRAM MEDIA ONLY
+                    if isinstance(
+                        msg.media,
+                        (
+                            MessageMediaPhoto,
+                            MessageMediaDocument
+                        )
                     ):
 
                         await client.send_file(
@@ -810,10 +810,8 @@ async def main():
                             buttons=buttons
                         )
 
-                        media_sent = True
-
-                    # TEXT POSTS
-                    if not media_sent:
+                    # TEXT / WEBPAGE POSTS
+                    else:
 
                         await client.send_message(
                             target,
